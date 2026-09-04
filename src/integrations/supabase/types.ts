@@ -14,16 +14,391 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      disaster_alerts: {
+        Row: {
+          active: boolean
+          area: string
+          category: string
+          detail: string | null
+          id: string
+          issued_at: string
+          severity: Database["public"]["Enums"]["severity_level"]
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          area: string
+          category: string
+          detail?: string | null
+          id?: string
+          issued_at?: string
+          severity?: Database["public"]["Enums"]["severity_level"]
+          title: string
+        }
+        Update: {
+          active?: boolean
+          area?: string
+          category?: string
+          detail?: string | null
+          id?: string
+          issued_at?: string
+          severity?: Database["public"]["Enums"]["severity_level"]
+          title?: string
+        }
+        Relationships: []
+      }
+      emergency_incidents: {
+        Row: {
+          ai_confidence: number
+          assigned_vehicle: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          incident_type: string
+          lat: number
+          lng: number
+          location_name: string
+          people_affected: number
+          reference: string
+          reports_fused: number
+          required_service: string
+          resolved_at: string | null
+          road_accessible: boolean
+          severity: Database["public"]["Enums"]["severity_level"]
+          status: Database["public"]["Enums"]["incident_status"]
+          summary: string | null
+        }
+        Insert: {
+          ai_confidence?: number
+          assigned_vehicle?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          incident_type: string
+          lat: number
+          lng: number
+          location_name: string
+          people_affected?: number
+          reference?: string
+          reports_fused?: number
+          required_service?: string
+          resolved_at?: string | null
+          road_accessible?: boolean
+          severity?: Database["public"]["Enums"]["severity_level"]
+          status?: Database["public"]["Enums"]["incident_status"]
+          summary?: string | null
+        }
+        Update: {
+          ai_confidence?: number
+          assigned_vehicle?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          incident_type?: string
+          lat?: number
+          lng?: number
+          location_name?: string
+          people_affected?: number
+          reference?: string
+          reports_fused?: number
+          required_service?: string
+          resolved_at?: string | null
+          road_accessible?: boolean
+          severity?: Database["public"]["Enums"]["severity_level"]
+          status?: Database["public"]["Enums"]["incident_status"]
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_incidents_assigned_vehicle_fkey"
+            columns: ["assigned_vehicle"]
+            isOneToOne: false
+            referencedRelation: "emergency_vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      emergency_vehicles: {
+        Row: {
+          code: string
+          crew: number
+          destination: string | null
+          eta_minutes: number | null
+          home_base: string | null
+          id: string
+          kind: string
+          lat: number
+          lng: number
+          status: Database["public"]["Enums"]["vehicle_status"]
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          crew?: number
+          destination?: string | null
+          eta_minutes?: number | null
+          home_base?: string | null
+          id?: string
+          kind: string
+          lat: number
+          lng: number
+          status?: Database["public"]["Enums"]["vehicle_status"]
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          crew?: number
+          destination?: string | null
+          eta_minutes?: number | null
+          home_base?: string | null
+          id?: string
+          kind?: string
+          lat?: number
+          lng?: number
+          status?: Database["public"]["Enums"]["vehicle_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hospitals: {
+        Row: {
+          beds_available: number
+          contact_label: string
+          created_at: string
+          district: string
+          id: string
+          is_operational: boolean
+          lat: number
+          lng: number
+          name: string
+          trauma_center: boolean
+        }
+        Insert: {
+          beds_available?: number
+          contact_label?: string
+          created_at?: string
+          district: string
+          id?: string
+          is_operational?: boolean
+          lat: number
+          lng: number
+          name: string
+          trauma_center?: boolean
+        }
+        Update: {
+          beds_available?: number
+          contact_label?: string
+          created_at?: string
+          district?: string
+          id?: string
+          is_operational?: boolean
+          lat?: number
+          lng?: number
+          name?: string
+          trauma_center?: boolean
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          agency: string | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+        }
+        Insert: {
+          agency?: string | null
+          created_at?: string
+          full_name?: string
+          id: string
+          phone?: string | null
+        }
+        Update: {
+          agency?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      road_conditions: {
+        Row: {
+          base_minutes: number
+          distance_km: number
+          from_node: string
+          id: string
+          note: string | null
+          risk: Database["public"]["Enums"]["severity_level"]
+          road_name: string
+          state: Database["public"]["Enums"]["road_state"]
+          to_node: string
+          updated_at: string
+        }
+        Insert: {
+          base_minutes: number
+          distance_km: number
+          from_node: string
+          id?: string
+          note?: string | null
+          risk?: Database["public"]["Enums"]["severity_level"]
+          road_name: string
+          state?: Database["public"]["Enums"]["road_state"]
+          to_node: string
+          updated_at?: string
+        }
+        Update: {
+          base_minutes?: number
+          distance_km?: number
+          from_node?: string
+          id?: string
+          note?: string | null
+          risk?: Database["public"]["Enums"]["severity_level"]
+          road_name?: string
+          state?: Database["public"]["Enums"]["road_state"]
+          to_node?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      routes: {
+        Row: {
+          created_at: string
+          destination: string
+          distance_km: number
+          eta_minutes: number
+          id: string
+          incident_id: string | null
+          label: string
+          origin: string
+          path: string[]
+          reason: string | null
+          recommended: boolean
+          risk: Database["public"]["Enums"]["severity_level"]
+        }
+        Insert: {
+          created_at?: string
+          destination: string
+          distance_km?: number
+          eta_minutes?: number
+          id?: string
+          incident_id?: string | null
+          label: string
+          origin: string
+          path?: string[]
+          reason?: string | null
+          recommended?: boolean
+          risk?: Database["public"]["Enums"]["severity_level"]
+        }
+        Update: {
+          created_at?: string
+          destination?: string
+          distance_km?: number
+          eta_minutes?: number
+          id?: string
+          incident_id?: string | null
+          label?: string
+          origin?: string
+          path?: string[]
+          reason?: string | null
+          recommended?: boolean
+          risk?: Database["public"]["Enums"]["severity_level"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routes_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "emergency_incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shelters: {
+        Row: {
+          capacity: number
+          created_at: string
+          district: string
+          id: string
+          kind: string
+          lat: number
+          lng: number
+          name: string
+          occupancy: number
+        }
+        Insert: {
+          capacity?: number
+          created_at?: string
+          district: string
+          id?: string
+          kind?: string
+          lat: number
+          lng: number
+          name: string
+          occupancy?: number
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          district?: string
+          id?: string
+          kind?: string
+          lat?: number
+          lng?: number
+          name?: string
+          occupancy?: number
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "dispatcher" | "responder"
+      incident_status: "new" | "assigned" | "in_progress" | "resolved"
+      road_state:
+        | "open"
+        | "flooded"
+        | "landslide"
+        | "bridge_damaged"
+        | "blocked"
+        | "high_risk"
+      severity_level: "critical" | "high" | "moderate" | "safe"
+      vehicle_status:
+        | "available"
+        | "en_route"
+        | "on_scene"
+        | "returning"
+        | "offline"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +525,25 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "dispatcher", "responder"],
+      incident_status: ["new", "assigned", "in_progress", "resolved"],
+      road_state: [
+        "open",
+        "flooded",
+        "landslide",
+        "bridge_damaged",
+        "blocked",
+        "high_risk",
+      ],
+      severity_level: ["critical", "high", "moderate", "safe"],
+      vehicle_status: [
+        "available",
+        "en_route",
+        "on_scene",
+        "returning",
+        "offline",
+      ],
+    },
   },
 } as const
