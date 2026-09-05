@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      camera_feeds: {
+        Row: {
+          authorized: boolean
+          district: string
+          id: string
+          label: string
+          last_frame_at: string
+          lat: number
+          lng: number
+          note: string | null
+          owner_kind: string
+        }
+        Insert: {
+          authorized?: boolean
+          district: string
+          id?: string
+          label: string
+          last_frame_at?: string
+          lat: number
+          lng: number
+          note?: string | null
+          owner_kind?: string
+        }
+        Update: {
+          authorized?: boolean
+          district?: string
+          id?: string
+          label?: string
+          last_frame_at?: string
+          lat?: number
+          lng?: number
+          note?: string | null
+          owner_kind?: string
+        }
+        Relationships: []
+      }
       disaster_alerts: {
         Row: {
           active: boolean
@@ -157,6 +193,36 @@ export type Database = {
           lng?: number
           status?: Database["public"]["Enums"]["vehicle_status"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      family_contacts: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          notify_by_sms: boolean
+          phone: string
+          relation: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          notify_by_sms?: boolean
+          phone: string
+          relation?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          notify_by_sms?: boolean
+          phone?: string
+          relation?: string
+          user_id?: string
         }
         Relationships: []
       }
