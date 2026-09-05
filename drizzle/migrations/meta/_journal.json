@@ -8,6 +8,13 @@
       "when": 1788504893581,
       "tag": "0000_create_resh_mesq_core",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788614685385,
+      "tag": "0001_family_contacts_cameras_public_sos",
+      "breakpoints": true
     }
   ]
 }
