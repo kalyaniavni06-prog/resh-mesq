@@ -9,10 +9,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
 const links = [
-  { to: "/dashboard", label: "Command centre" },
-  { to: "/route-planner", label: "Safe routes" },
+  { to: "/incidents", label: "Command centre" },
+  { to: "/routes", label: "Safe routes" },
   { to: "/alerts", label: "Alerts" },
-  { to: "/resources", label: "Hospitals & shelters" },
+  { to: "/facilities", label: "Hospitals & shelters" },
   { to: "/accessibility", label: "Accessibility" },
 ] as const;
 
@@ -28,7 +28,7 @@ export function SiteHeader() {
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
       if (event.shiftKey && (event.key === "S" || event.key === "s")) {
         event.preventDefault();
-        navigate({ to: "/report" });
+      navigate({ to: "/sos" });
       }
     };
     window.addEventListener("keydown", onKey);
@@ -67,7 +67,7 @@ export function SiteHeader() {
         <div className="ml-auto flex items-center gap-2">
           <A11yToolbar />
           <Button asChild variant="destructive" className="gap-2 font-semibold">
-            <Link to="/report">
+            <Link to="/sos">
               <Siren className="size-4" aria-hidden="true" />
               SOS
             </Link>
@@ -91,7 +91,7 @@ export function SiteHeader() {
               </div>
             ) : (
               <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
-                <Link to="/auth">Responder sign in</Link>
+                <Link to="/auth/sign-in">Responder sign in</Link>
               </Button>
             ))}
 
@@ -115,7 +115,7 @@ export function SiteHeader() {
                   </Link>
                 ))}
                 <Link
-                  to={user ? "/family" : "/auth"}
+                  to={user ? "/family" : "/auth/sign-in"}
                   onClick={() => setOpen(false)}
                   className="rounded-md px-3 py-2.5 text-sm font-medium hover:bg-accent"
                 >
@@ -144,17 +144,17 @@ export function SiteFooter() {
           <p className="label-caps">Respond</p>
           <ul className="mt-3 space-y-2 text-sm">
             <li>
-              <Link to="/report" className="hover:underline">
+              <Link to="/sos" className="hover:underline">
                 Raise an SOS
               </Link>
             </li>
             <li>
-              <Link to="/dashboard" className="hover:underline">
+              <Link to="/incidents" className="hover:underline">
                 Command centre
               </Link>
             </li>
             <li>
-              <Link to="/route-planner" className="hover:underline">
+              <Link to="/routes" className="hover:underline">
                 Safe route planner
               </Link>
             </li>
@@ -169,7 +169,7 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link to="/resources" className="hover:underline">
+              <Link to="/facilities" className="hover:underline">
                 Hospitals &amp; shelters
               </Link>
             </li>
