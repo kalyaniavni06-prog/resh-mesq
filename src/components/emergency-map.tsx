@@ -70,10 +70,11 @@ export function EmergencyMap({
     })
     .filter((v): v is NonNullable<typeof v> => v !== null);
 
-  const highlightSegments = (highlightPath ?? [])
+  const pathNodes = highlightPath ?? [];
+  const highlightSegments = pathNodes
     .slice(0, -1)
     .map((from, index) => {
-      const to = highlightPath![index + 1];
+      const to = pathNodes[index + 1] ?? "";
       const a = nodeAt(from);
       const b = nodeAt(to);
       if (!a || !b) return null;
