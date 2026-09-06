@@ -8,12 +8,12 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Toaster } from "@/components/ui/sonner";
 import { PreferencesProvider } from "@/lib/preferences";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { registerServiceWorker } from "../hooks/useOfflineSOSQueue";
 
 function NotFoundComponent() {
   return (
@@ -129,6 +129,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Register offline-capable service worker once on mount
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

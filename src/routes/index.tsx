@@ -10,7 +10,6 @@ import {
   Siren,
   Truck,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
@@ -40,24 +39,24 @@ const capabilities = [
     icon: ActivitySquare,
     title: "Emergency command dashboard",
     body: "Open emergencies, crew availability, blocked roads and high-risk areas on one screen.",
-    to: "/dashboard" as const,
+    to: "/incidents" as const,
   },
   {
     icon: Map,
-    title: "Interactive emergency map",
-    body: "Vehicles, hospitals, shelters, flood and landslide zones, damaged bridges and safe roads.",
-    to: "/dashboard" as const,
+    title: "Community needs map",
+    body: "Drop a pin to mark where help is needed — visible in real time to nearby volunteers and responders.",
+    to: "/map" as const,
   },
   {
     icon: RouteIcon,
     title: "Smart safe routing",
     body: "Fastest, safest and alternative corridors with ETA, risk level and a written explanation.",
-    to: "/route-planner" as const,
+    to: "/routes" as const,
   },
   {
     icon: AlertTriangle,
     title: "Disaster intelligence",
-    body: "Flood, landslide, road, bridge and weather alerts graded Critical, High, Moderate or Safe.",
+    body: "Flood, landslide, road, bridge and weather alerts in English and Nepali.",
     to: "/alerts" as const,
   },
   {
@@ -70,12 +69,12 @@ const capabilities = [
     icon: Hospital,
     title: "Hospitals & shelters",
     body: "Nearest facilities with straight-line distance, estimated arrival time and free beds.",
-    to: "/resources" as const,
+    to: "/facilities" as const,
   },
   {
     icon: Truck,
     title: "Vehicle tracking",
-    body: "Ambulances, fire units and rescue crews with simulated movement for demonstration.",
+    body: "Ambulances, fire units and rescue crews with live status and ETA.",
     to: "/vehicles" as const,
   },
   {
@@ -99,39 +98,39 @@ function Landing() {
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
             RESH MESQ plans disaster-safe routes for emergency crews. When a bridge is down or a
-            highway is under water, the shortest route is often the wrong one — RESH MESQ scores every
-            corridor for hazard, then explains the choice.
+            highway is under water, the shortest route is often the wrong one — RESH MESQ scores
+            every corridor for hazard, then explains the choice.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Button asChild size="lg" className="gap-2 font-semibold">
-              <Link to="/dashboard">
+              <Link to="/incidents">
                 <ActivitySquare className="size-5" aria-hidden="true" />
                 Open Emergency Dashboard
               </Link>
             </Button>
             <Button asChild size="lg" variant="destructive" className="gap-2 font-semibold">
-              <Link to="/report">
+              <Link to="/sos">
                 <Siren className="size-5" aria-hidden="true" />
                 Raise an SOS
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="gap-2">
-              <Link to="/route-planner">
+              <Link to="/routes">
                 <RouteIcon className="size-5" aria-hidden="true" />
                 Plan a safe route
               </Link>
             </Button>
           </div>
           <p className="mt-8 max-w-2xl rounded-lg border border-border bg-secondary/50 px-4 py-3 text-sm text-muted-foreground">
-            AI is decision support. Verify before real-world action. Contact details, camera feeds and
-            vehicle movement in this build are clearly-labelled demonstration data.
+            AI is decision support. Verify before real-world action. Contact details, camera feeds
+            and vehicle movement in this build are clearly-labelled demonstration data.
           </p>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-16">
         <h2 className="font-display text-2xl font-bold tracking-tight">
-          Eleven working areas, one operating picture
+          Twelve working areas, one operating picture
         </h2>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {capabilities.map((item) => (
@@ -156,8 +155,9 @@ function Landing() {
               Built to be usable when it matters most
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Light and dark themes, a high-contrast mode, three text sizes, full keyboard operation,
-              spoken guidance for blind and low-vision users, and a text version of every map.
+              Light and dark themes, high-contrast mode, three text sizes, full keyboard operation,
+              spoken guidance for blind and low-vision users, multilingual alerts in English and
+              Nepali, and offline SOS queuing when connectivity is lost.
             </p>
             <Button asChild variant="outline" className="mt-5">
               <Link to="/accessibility">Accessibility features</Link>
@@ -171,8 +171,9 @@ function Landing() {
                 damaged bridge or blocked road is never offered, however short it is.
               </li>
               <li>
-                <span className="font-semibold">Risk costs minutes.</span> Flooded, landslide-prone
-                and high-risk stretches carry a time penalty so a longer safe corridor can win.
+                <span className="font-semibold">Risk costs minutes.</span> Flooded,
+                landslide-prone and high-risk stretches carry a time penalty so a longer safe
+                corridor can win.
               </li>
               <li>
                 <span className="font-semibold">Every result is explained.</span> You see the roads
