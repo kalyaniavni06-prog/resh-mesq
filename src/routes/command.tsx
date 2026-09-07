@@ -13,7 +13,6 @@ import {
   Truck,
 } from "lucide-react";
 
-import { AppShell } from "@/components/AppShell";
 import { PageHeader, StatCard } from "@/components/PageHeader";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { IncidentStatusBadge, VehicleStatusBadge } from "@/components/StatusBadge";
@@ -103,7 +102,7 @@ function CommandCentrePage() {
   const priority = [...openIncidents]
     .sort(
       (a, b) =>
-        severityOrder(a.severity) - severityOrder(b.severity) ||
+        severityOrder[a.severity] - severityOrder[b.severity] ||
         b.people_affected - a.people_affected,
     )
     .slice(0, 6);
@@ -117,7 +116,7 @@ function CommandCentrePage() {
     incidents.isLoading || vehicles.isLoading || roads.isLoading || alerts.isLoading;
 
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="Command Centre"
         description="Current operating picture, drawn live from the RESH MESQ operations database"
@@ -324,7 +323,7 @@ function CommandCentrePage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       <Badge variant="outline" className="text-[10px]">
-                        {roadStateLabel(road.state)}
+                        {roadStateLabel[road.state]}
                       </Badge>
                       <SeverityBadge severity={road.risk} />
                     </div>
@@ -391,6 +390,6 @@ function CommandCentrePage() {
           </div>
         </section>
       </div>
-    </AppShell>
+    </div>
   );
 }
