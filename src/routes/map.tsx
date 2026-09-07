@@ -1,28 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  MapPin,
-  Plus,
-  Trash2,
-  Users,
-  Droplets,
-  Cross,
-  Package,
-  RefreshCw,
-  Info,
-  X,
-} from "lucide-react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { ClientOnly } from "@tanstack/react-router";
+import { MapPin, Plus, Trash2, RefreshCw, Info, X } from "lucide-react";
 import { toast } from "sonner";
-// Leaflet CSS — must be imported before components
-import "leaflet/dist/leaflet.css";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  useMapEvents,
-} from "react-leaflet";
-import L from "leaflet";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -40,108 +20,49 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { formatDistanceToNow } from "date-fns";
+import {
+  PIN_CATEGORIES,
+  PIN_INCIDENT_TYPES,
+  type PinCategory,
+} from "@/lib/pin-categories";
 
 export const Route = createFileRoute("/map")({
+  head: () => ({
+    meta: [
+      { title: "Community Needs Map — RESH MESQ" },
+      {
+        name: "description",
+        content:
+          "Drop a pin on the RESH MESQ community needs map to mark where help is required during a disaster response.",
+      },
+      { property: "og:title", content: "Community Needs Map — RESH MESQ" },
+      {
+        property: "og:description",
+        content: "Mark where help is needed so responders can see it on the operations map.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: CrowdMapPage,
 });
 
-// ── Fix Leaflet's default icon paths broken by bundlers ──────────────────────
-// Leaflet tries to load marker icons from a relative path that Vite rewrites.
-// We point it at the CDN copy which is always available.
-delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)["_getIconUrl"];
-L.Icon.Default.mergeOptions({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+// Leaflet touches `window` at import time, so it must only load in the browser.
+const CommunityMapCanvas = lazy(() => import("@/components/community-map-canvas"));
 
-// ── Pin categories ────────────────────────────────────────────────────────────
-type PinCategory = "trapped" | "medical" | "food_water" | "flood_rescue" | "evacuation";
-
-interface PinMeta {
-  label: string;
-  color: string; // Tailwind + hex for Leaflet icon
-  hex: string;
-  icon: React.ReactNode;
+function MapSkeleton() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-muted">
+      <p className="text-xs text-muted-foreground">Loading map…</p>
+    </div>
+  );
 }
-
-const PIN_CATEGORIES: Record<PinCategory, PinMeta> = {
-  trapped: {
-    label: "People trapped",
-    color: "bg-critical text-white",
-    hex: "#dc2626",
-    icon: <Users className="h-3.5 w-3.5" />,
-  },
-  medical: {
-    label: "Medical needed",
-    color: "bg-safe text-white",
-    hex: "#16a34a",
-    icon: <Cross className="h-3.5 w-3.5" />,
-  },
-  food_water: {
-    label: "Food / Water needed",
-    color: "bg-primary text-white",
-    hex: "#2563eb",
-    icon: <Package className="h-3.5 w-3.5" />,
-  },
-  flood_rescue: {
-    label: "Flood rescue",
-    color: "bg-blue-500 text-white",
-    hex: "#3b82f6",
-    icon: <Droplets className="h-3.5 w-3.5" />,
-  },
-  evacuation: {
-    label: "Evacuation needed",
-    color: "bg-amber-500 text-white",
-    hex: "#f59e0b",
-    icon: <MapPin className="h-3.5 w-3.5" />,
-  },
-};
-
-// Build a coloured Leaflet DivIcon per category
-function makeDivIcon(category: PinCategory): L.DivIcon {
-  const hex = PIN_CATEGORIES[category].hex;
-  return L.divIcon({
-    className: "",
-    html: `<div style="
-      width:28px;height:28px;border-radius:50% 50% 50% 0;
-      background:${hex};border:2px solid white;
-      transform:rotate(-45deg);
-      box-shadow:0 2px 6px rgba(0,0,0,0.35);
-    "></div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -30],
-  });
-}
-
-// Pre-build icons once
-const ICONS: Record<PinCategory, L.DivIcon> = Object.fromEntries(
-  (Object.keys(PIN_CATEGORIES) as PinCategory[]).map((k) => [k, makeDivIcon(k)]),
-) as Record<PinCategory, L.DivIcon>;
 
 // ── DB row type (community pins are stored as emergency_incidents) ─────────────
 type CommunityPin = Tables<"emergency_incidents"> & {
   incident_type: PinCategory | string; // we filter to PinCategory values
 };
 
-const PIN_INCIDENT_TYPES = Object.keys(PIN_CATEGORIES) as PinCategory[];
-
-// ── Map click handler (inner component, must be inside MapContainer) ──────────
-function ClickHandler({
-  active,
-  onMapClick,
-}: {
-  active: boolean;
-  onMapClick: (lat: number, lng: number) => void;
-}) {
-  useMapEvents({
-    click(e) {
-      if (active) onMapClick(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 function CrowdMapPage() {
