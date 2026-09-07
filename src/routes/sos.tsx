@@ -16,7 +16,6 @@ import {
   Tent,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -440,7 +439,7 @@ function SOSPage() {
 
   if (submitted) {
     return (
-      <AppShell>
+      <div>
         <PageHeader title="SOS Report" />
         <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
           <div
@@ -483,12 +482,12 @@ function SOSPage() {
             )}
           </div>
         </div>
-      </AppShell>
+      </div>
     );
   }
 
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="SOS Emergency Report"
         description="Submit an emergency report to the response command centre"
@@ -699,6 +698,6 @@ function SOSPage() {
           </Button>
         </form>
       </div>
-    </AppShell>
+    </div>
   );
 }

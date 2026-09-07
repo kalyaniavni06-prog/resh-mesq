@@ -12,7 +12,6 @@ import {
   Truck,
   RefreshCw,
 } from "lucide-react";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { RoadStateBadge } from "@/components/StatusBadge";
@@ -326,7 +325,7 @@ function RoutePlannerPage() {
   const availableVehicles = vehicles?.filter((v) => v.status === "available") ?? [];
 
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="Safe Route Planner"
         description="Hazard-aware routing using live road condition data"
@@ -517,6 +516,6 @@ function RoutePlannerPage() {
           </div>
         </div>
       </div>
-    </AppShell>
+    </div>
   );
 }

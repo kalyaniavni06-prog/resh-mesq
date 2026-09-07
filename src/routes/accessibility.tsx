@@ -10,7 +10,6 @@ import {
   Info,
   Keyboard,
 } from "lucide-react";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +46,7 @@ function AccessibilityPage() {
   }
 
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="Accessibility Settings"
         description="Customise the platform for your visual and accessibility needs"
@@ -247,6 +246,6 @@ function AccessibilityPage() {
           </div>
         </div>
       </div>
-    </AppShell>
+    </div>
   );
 }

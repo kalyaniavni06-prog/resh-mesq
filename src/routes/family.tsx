@@ -11,7 +11,6 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -194,7 +193,7 @@ function FamilyCirclePage() {
   const needsHelp = contacts.filter((c) => c.status === "needs_help").length;
 
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="Family Circle"
         description="Track the safety status of family members and close contacts"
@@ -346,6 +345,6 @@ function FamilyCirclePage() {
           </form>
         </DialogContent>
       </Dialog>
-    </AppShell>
+    </div>
   );
 }

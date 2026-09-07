@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { MapPin, Search, Clock, Ruler, AlertTriangle } from "lucide-react";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader, StatCard } from "@/components/PageHeader";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { RoadStateBadge } from "@/components/StatusBadge";
@@ -62,7 +61,7 @@ function RoadConditionsPage() {
   const criticalRisk = roads?.filter((r) => r.risk === "critical").length ?? 0;
 
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="Road Conditions"
         description={`${roads?.length ?? 0} road segments monitored`}
@@ -202,6 +201,6 @@ function RoadConditionsPage() {
           </div>
         )}
       </div>
-    </AppShell>
+    </div>
   );
 }

@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   BedDouble,
 } from "lucide-react";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader, StatCard } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,7 +167,7 @@ function FacilitiesPage() {
   const isLoading = loadH || loadS;
 
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="Hospitals & Shelters"
         description="Medical facilities and evacuation shelters — Nepal flood scenario"
@@ -267,6 +266,6 @@ function FacilitiesPage() {
           </div>
         )}
       </div>
-    </AppShell>
+    </div>
   );
 }

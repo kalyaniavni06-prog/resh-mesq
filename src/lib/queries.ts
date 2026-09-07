@@ -64,17 +64,30 @@ export const sheltersQuery = queryOptions({
 
 export const camerasQuery = queryOptions({
   queryKey: ["cameras"],
-  queryFn: () => unwrap<CameraFeed[]>(supabase.from("camera_feeds").select("*").order("label")),
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("camera_feeds")
+      .select("*")
+      .order("label");
+    // Table may not exist in all deployments — return empty array gracefully
+    if (error) return [] as CameraFeed[];
+    return (data ?? []) as CameraFeed[];
+  },
   staleTime: 60_000,
 });
 
 export function familyContactsQuery(userId: string | undefined) {
   return queryOptions({
     queryKey: ["family-contacts", userId ?? "anon"],
-    queryFn: () =>
-      unwrap<FamilyContact[]>(
-        supabase.from("family_contacts").select("*").order("created_at", { ascending: true }),
-      ),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("family_contacts")
+        .select("*")
+        .order("created_at", { ascending: true });
+      // Table may not exist in all deployments — return empty array gracefully
+      if (error) return [] as FamilyContact[];
+      return (data ?? []) as FamilyContact[];
+    },
     enabled: Boolean(userId),
   });
 }

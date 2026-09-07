@@ -13,7 +13,6 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader, StatCard } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -148,7 +147,7 @@ function AnalyticsPage() {
       : 0;
 
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="Analytics"
         description="Operational metrics — Nepal flood scenario (demo data)"
@@ -397,6 +396,6 @@ function AnalyticsPage() {
           sourced from live emergency systems.
         </p>
       </div>
-    </AppShell>
+    </div>
   );
 }

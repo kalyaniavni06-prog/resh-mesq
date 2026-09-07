@@ -14,7 +14,6 @@ import {
   PersonStanding,
   Languages,
 } from "lucide-react";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader, StatCard } from "@/components/PageHeader";
 import { SeverityBadge, SeverityDot } from "@/components/SeverityBadge";
 import { Button } from "@/components/ui/button";
@@ -230,7 +229,7 @@ function AlertCentrePage() {
   const high = active.filter((a) => a.severity === "high");
 
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="Alert Centre"
         description="Disaster alerts — Nepal flood scenario"
@@ -371,6 +370,6 @@ function AlertCentrePage() {
           </div>
         )}
       </div>
-    </AppShell>
+    </div>
   );
 }

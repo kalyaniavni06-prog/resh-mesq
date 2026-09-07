@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { ClientOnly } from "@tanstack/react-router";
 import { MapPin, Plus, Trash2, RefreshCw, Info, X } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,23 +59,20 @@ function MapSkeleton() {
 
 // ── DB row type (community pins are stored as emergency_incidents) ─────────────
 type CommunityPin = Tables<"emergency_incidents"> & {
-  incident_type: PinCategory | string; // we filter to PinCategory values
+  incident_type: PinCategory | string;
 };
-
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 function CrowdMapPage() {
   const [pins, setPins] = useState<CommunityPin[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Drop-pin UI state
   const [dropMode, setDropMode] = useState(false);
   const [pendingLatLng, setPendingLatLng] = useState<{ lat: number; lng: number } | null>(null);
   const [pinCategory, setPinCategory] = useState<PinCategory>("trapped");
   const [pinNote, setPinNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // ── Load existing pins ────────────────────────────────────────────────────
   const loadPins = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -92,7 +88,6 @@ function CrowdMapPage() {
     loadPins();
   }, [loadPins]);
 
-  // ── Supabase Realtime subscription ───────────────────────────────────────
   useEffect(() => {
     const channel = supabase
       .channel("community-pins-realtime")
@@ -107,11 +102,12 @@ function CrowdMapPage() {
         (payload) => {
           const newPin = payload.new as CommunityPin;
           setPins((prev) => {
-            // avoid duplicates
             if (prev.find((p) => p.id === newPin.id)) return prev;
             return [newPin, ...prev];
           });
-          toast.info(`New pin: ${PIN_CATEGORIES[newPin.incident_type as PinCategory]?.label ?? newPin.incident_type} at ${newPin.location_name}`);
+          toast.info(
+            `New pin: ${PIN_CATEGORIES[newPin.incident_type as PinCategory]?.label ?? newPin.incident_type} at ${newPin.location_name}`,
+          );
         },
       )
       .on(
@@ -127,18 +123,15 @@ function CrowdMapPage() {
         },
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
 
-  // ── Handle map click while in drop mode ──────────────────────────────────
   function handleMapClick(lat: number, lng: number) {
     setPendingLatLng({ lat, lng });
   }
 
-  // ── Submit new pin ────────────────────────────────────────────────────────
   async function submitPin() {
     if (!pendingLatLng) return;
     setSubmitting(true);
@@ -148,10 +141,16 @@ function CrowdMapPage() {
         location_name: `Community pin — ${PIN_CATEGORIES[pinCategory].label}`,
         lat: pendingLatLng.lat,
         lng: pendingLatLng.lng,
-        severity: pinCategory === "trapped" ? "critical" : pinCategory === "medical" ? "high" : "moderate",
+        severity:
+          pinCategory === "trapped" ? "critical" : pinCategory === "medical" ? "high" : "moderate",
         people_affected: 1,
         road_accessible: true,
-        required_service: pinCategory === "medical" ? "ambulance" : pinCategory === "trapped" ? "rescue_team" : "all",
+        required_service:
+          pinCategory === "medical"
+            ? "ambulance"
+            : pinCategory === "trapped"
+              ? "rescue_team"
+              : "all",
         summary: pinNote.trim() || null,
         status: "new",
       });
@@ -168,30 +167,19 @@ function CrowdMapPage() {
     }
   }
 
-  // ── Delete pin ────────────────────────────────────────────────────────────
   async function deletePin(id: string) {
     const { error } = await supabase.from("emergency_incidents").delete().eq("id", id);
     if (error) toast.error("Could not remove pin");
     else toast.success("Pin removed");
   }
 
-  const categoryCounts = PIN_INCIDENT_TYPES.map((cat) => ({
-    cat,
-    count: pins.filter((p) => p.incident_type === cat).length,
-  })).filter((x) => x.count > 0);
-
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="Community Needs Map"
         description="Drop a pin to mark where help is needed — visible in real time to responders"
       >
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={loadPins}
-          disabled={loading}
-        >
+        <Button variant="outline" size="sm" onClick={loadPins} disabled={loading}>
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
@@ -217,16 +205,14 @@ function CrowdMapPage() {
         </Button>
       </PageHeader>
 
-      <div className="flex h-[calc(100vh-7rem)] overflow-hidden">
-        {/* ── Map ─────────────────────────────────────────────────────────── */}
+      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+        {/* Map */}
         <div className="relative flex-1">
-          {/* Drop-mode banner */}
           {dropMode && !pendingLatLng && (
             <div className="absolute top-3 left-1/2 z-[1000] -translate-x-1/2 rounded-lg border border-primary/40 bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg">
               Click anywhere on the map to place your pin
             </div>
           )}
-
           <ClientOnly fallback={<MapSkeleton />}>
             <Suspense fallback={<MapSkeleton />}>
               <CommunityMapCanvas
@@ -239,12 +225,10 @@ function CrowdMapPage() {
               />
             </Suspense>
           </ClientOnly>
-
         </div>
 
-        {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+        {/* Sidebar */}
         <div className="hidden w-72 shrink-0 flex-col overflow-y-auto border-l border-border bg-card lg:flex">
-          {/* Drop-pin form */}
           {dropMode && (
             <Card className="m-3 border-primary/40 bg-primary/5">
               <CardHeader className="pb-3">
@@ -256,10 +240,7 @@ function CrowdMapPage() {
               <CardContent className="space-y-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Category</Label>
-                  <Select
-                    value={pinCategory}
-                    onValueChange={(v) => setPinCategory(v as PinCategory)}
-                  >
+                  <Select value={pinCategory} onValueChange={(v) => setPinCategory(v as PinCategory)}>
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
@@ -272,7 +253,6 @@ function CrowdMapPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 {pendingLatLng && (
                   <>
                     <div className="rounded-md bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">
@@ -289,19 +269,10 @@ function CrowdMapPage() {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        className="flex-1"
-                        onClick={submitPin}
-                        disabled={submitting}
-                      >
+                      <Button size="sm" className="flex-1" onClick={submitPin} disabled={submitting}>
                         {submitting ? "Saving…" : "Confirm pin"}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setPendingLatLng(null)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => setPendingLatLng(null)}>
                         Re-pick
                       </Button>
                     </div>
@@ -311,7 +282,6 @@ function CrowdMapPage() {
             </Card>
           )}
 
-          {/* Category legend */}
           <div className="px-3 pt-3">
             <p className="label-caps mb-2">Pin categories</p>
             <div className="space-y-1.5">
@@ -339,7 +309,6 @@ function CrowdMapPage() {
             </div>
           </div>
 
-          {/* Active pin count */}
           <div className="mx-3 mt-3 rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{pins.length}</span> community pin
             {pins.length !== 1 ? "s" : ""} on the map
@@ -348,7 +317,6 @@ function CrowdMapPage() {
             )}
           </div>
 
-          {/* Pin list */}
           <div className="mt-3 flex-1 overflow-y-auto">
             {loading ? (
               <p className="px-3 text-xs text-muted-foreground">Loading…</p>
@@ -398,7 +366,6 @@ function CrowdMapPage() {
             )}
           </div>
 
-          {/* Disclaimer */}
           <div className="m-3 flex items-start gap-2 rounded-lg border border-moderate/30 bg-moderate-soft px-3 py-2 text-[10px] text-moderate-foreground">
             <Info className="mt-0.5 h-3 w-3 shrink-0" />
             Demo system. Pins are stored in the shared demo database and are visible to all users.
@@ -406,6 +373,6 @@ function CrowdMapPage() {
           </div>
         </div>
       </div>
-    </AppShell>
+    </div>
   );
 }

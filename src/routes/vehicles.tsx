@@ -10,7 +10,6 @@ import {
   Search,
   RefreshCw,
 } from "lucide-react";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader, StatCard } from "@/components/PageHeader";
 import { VehicleStatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -205,7 +204,7 @@ function VehicleTrackingPage() {
   const offline = vehicles?.filter((v) => v.status === "offline").length ?? 0;
 
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="Vehicle Tracking"
         description={`${vehicles?.length ?? 0} vehicles in fleet`}
@@ -303,6 +302,6 @@ function VehicleTrackingPage() {
           )}
         </div>
       </div>
-    </AppShell>
+    </div>
   );
 }

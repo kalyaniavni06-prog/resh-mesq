@@ -14,7 +14,6 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { SeverityBadge, SeverityDot } from "@/components/SeverityBadge";
 import { IncidentStatusBadge } from "@/components/StatusBadge";
@@ -528,7 +527,7 @@ function IncidentsPage() {
   }
 
   return (
-    <AppShell>
+    <div>
       <PageHeader
         title="Incident Management"
         description={`${incidents?.length ?? 0} total incidents`}
@@ -688,6 +687,6 @@ function IncidentsPage() {
         onClose={() => setFormOpen(false)}
         editing={editing}
       />
-    </AppShell>
+    </div>
   );
 }
