@@ -227,64 +227,19 @@ function CrowdMapPage() {
             </div>
           )}
 
-          <MapContainer
-            center={[27.7, 85.32]}
-            zoom={10}
-            style={{ height: "100%", width: "100%" }}
-            className={dropMode && !pendingLatLng ? "cursor-crosshair" : ""}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+          <ClientOnly fallback={<MapSkeleton />}>
+            <Suspense fallback={<MapSkeleton />}>
+              <CommunityMapCanvas
+                pins={pins}
+                dropMode={dropMode}
+                pendingLatLng={pendingLatLng}
+                pinCategory={pinCategory}
+                onMapClick={handleMapClick}
+                onDeletePin={deletePin}
+              />
+            </Suspense>
+          </ClientOnly>
 
-            <ClickHandler
-              active={dropMode && !pendingLatLng}
-              onMapClick={handleMapClick}
-            />
-
-            {/* Existing community pins */}
-            {pins.map((pin) => {
-              const cat = pin.incident_type as PinCategory;
-              const meta = PIN_CATEGORIES[cat];
-              return (
-                <Marker key={pin.id} position={[pin.lat, pin.lng]} icon={ICONS[cat] ?? ICONS.trapped}>
-                  <Popup>
-                    <div className="min-w-[180px] space-y-1.5 text-sm">
-                      <div className="flex items-center gap-1.5 font-semibold">
-                        {meta?.icon}
-                        <span>{meta?.label ?? cat}</span>
-                      </div>
-                      {pin.summary && (
-                        <p className="text-muted-foreground leading-snug">{pin.summary}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(pin.created_at), { addSuffix: true })}
-                      </p>
-                      <button
-                        onClick={() => deletePin(pin.id)}
-                        className="flex items-center gap-1 rounded text-xs text-destructive hover:underline mt-1"
-                      >
-                        <Trash2 className="h-3 w-3" /> Remove pin
-                      </button>
-                    </div>
-                  </Popup>
-                </Marker>
-              );
-            })}
-
-            {/* Pending pin preview */}
-            {pendingLatLng && (
-              <Marker
-                position={[pendingLatLng.lat, pendingLatLng.lng]}
-                icon={ICONS[pinCategory] ?? ICONS.trapped}
-              >
-                <Popup autoClose={false} closeOnClick={false}>
-                  <p className="text-xs font-medium">Confirm pin location</p>
-                </Popup>
-              </Marker>
-            )}
-          </MapContainer>
         </div>
 
         {/* ── Sidebar ─────────────────────────────────────────────────────── */}
