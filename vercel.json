@@ -1,8 +1,5 @@
 {
   "framework": "tanstack-start",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "env": {
-    "LOVABLE_NITRO_PRESET": "lovable-fetch-bundle"
-  }
+  "buildCommand": "npm run build:vercel",
+  "installCommand": "npm install"
 }
