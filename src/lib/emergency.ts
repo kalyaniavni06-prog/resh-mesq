@@ -214,3 +214,8 @@ export function timeAgo(iso: string): string {
   if (hours < 24) return `${hours} h ago`;
   return `${Math.round(hours / 24)} d ago`;
 }
+
+/** Human-readable label for a vehicle kind string (e.g. "rescue_truck" → "Rescue truck"). */
+export function vehicleKindLabel(kind: string): string {
+  return kind.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
