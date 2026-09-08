@@ -13,9 +13,11 @@ import {
   Navigation,
   Radio,
   Route as RouteIcon,
+  Search,
   Siren,
   Timer,
   Truck,
+  UserX,
   Users,
   XCircle,
   Zap,
@@ -56,6 +58,10 @@ import {
   timeAgo,
   vehicleKindLabel,
 } from "@/lib/emergency";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+
+type MissingPerson = Tables<"missing_persons">;
 
 export const Route = createFileRoute("/command")({
   head: () => ({
@@ -80,6 +86,7 @@ const MODULES = [
   { to: "/cctv", label: "CCTV", icon: Camera },
   { to: "/facilities", label: "Facilities", icon: Hospital },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/missing-person", label: "Missing Person", icon: UserX },
 ] as const;
 
 // ── Emergency workflow steps ──────────────────────────────────────────────────
@@ -183,6 +190,23 @@ function CommandCentrePage() {
     vehicles.isLoading ||
     roads.isLoading ||
     alerts.isLoading;
+
+  // ── Missing person reports ───────────────────────────────────────────────
+  const missingPersonsQuery = useQuery({
+    queryKey: ["missing_persons"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("missing_persons")
+        .select("id,case_id,full_name,approximate_age,last_known_location,status,created_at")
+        .in("status", ["reported", "verified", "search_in_progress"])
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (error) return [] as MissingPerson[];
+      return (data ?? []) as MissingPerson[];
+    },
+    staleTime: 30_000,
+  });
+  const activeMissingPersons = missingPersonsQuery.data ?? [];
 
   // ── Charts ──────────────────────────────────────────────────────────────────
   const severityDonut = useMemo(() => {
@@ -475,7 +499,7 @@ function CommandCentrePage() {
                         <Cell key={entry.name} fill={SEV_COLORS[entry.name] ?? "#888"} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v, n) => [v, severityLabel[n as string] ?? n]} />
+                    <Tooltip formatter={(v, n) => [v, severityLabel[n as keyof typeof severityLabel] ?? n]} />
                   </PieChart>
                 </ResponsiveContainer>
                 <ul className="mt-2 space-y-1" aria-label="Severity legend">
@@ -754,6 +778,52 @@ function CommandCentrePage() {
             </ul>
           )}
         </section>
+
+        {/* ── Missing person reports panel ────────────────────────────────── */}
+        {(activeMissingPersons.length > 0 || missingPersonsQuery.isLoading) && (
+          <section className="panel" aria-label="Active missing person reports">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <p className="label-caps flex items-center gap-1.5">
+                <UserX className="h-3.5 w-3.5 text-high-foreground" aria-hidden="true" />
+                Missing person reports ({activeMissingPersons.length})
+              </p>
+              <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+                <Link to="/missing-person">
+                  All cases <ArrowRight className="h-3 w-3 ml-0.5" />
+                </Link>
+              </Button>
+            </div>
+            {missingPersonsQuery.isLoading ? (
+              <div className="space-y-2 p-3">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              <ul className="divide-y divide-border">
+                {activeMissingPersons.map((mp) => (
+                  <li key={mp.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-high-soft">
+                      <Search className="h-3.5 w-3.5 text-high-foreground" aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold truncate">{mp.full_name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {mp.last_known_location} · Age: {mp.approximate_age}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-mono text-[10px] text-muted-foreground">{mp.case_id}</p>
+                      <p className={`text-[10px] font-semibold capitalize ${mp.status === "search_in_progress" ? "text-primary" : "text-moderate-foreground"}`}>
+                        {mp.status.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
         {/* ── Quick nav ─────────────────────────────────────────────────────── */}
         <section aria-label="Operational modules">

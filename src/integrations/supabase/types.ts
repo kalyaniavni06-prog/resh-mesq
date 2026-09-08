@@ -417,6 +417,72 @@ export type Database = {
         }
         Relationships: []
       }
+      missing_persons: {
+        Row: {
+          id: string
+          case_id: string
+          full_name: string
+          approximate_age: number
+          gender: string
+          clothing_desc: string | null
+          identifying_desc: string | null
+          last_known_location: string
+          last_seen_at: string
+          lat: number | null
+          lng: number | null
+          photo_url: string | null
+          reporter_name: string
+          reporter_contact: string
+          status: "reported" | "verified" | "search_in_progress" | "located" | "closed"
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          case_id?: string
+          full_name: string
+          approximate_age: number
+          gender?: string
+          clothing_desc?: string | null
+          identifying_desc?: string | null
+          last_known_location: string
+          last_seen_at?: string
+          lat?: number | null
+          lng?: number | null
+          photo_url?: string | null
+          reporter_name: string
+          reporter_contact: string
+          status?: "reported" | "verified" | "search_in_progress" | "located" | "closed"
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          case_id?: string
+          full_name?: string
+          approximate_age?: number
+          gender?: string
+          clothing_desc?: string | null
+          identifying_desc?: string | null
+          last_known_location?: string
+          last_seen_at?: string
+          lat?: number | null
+          lng?: number | null
+          photo_url?: string | null
+          reporter_name?: string
+          reporter_contact?: string
+          status?: "reported" | "verified" | "search_in_progress" | "located" | "closed"
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string

@@ -15,10 +15,12 @@ import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as CctvRouteImport } from './routes/cctv'
 import { Route as CommandRouteImport } from './routes/command'
+import { Route as EvacuationRouteImport } from './routes/evacuation'
 import { Route as FacilitiesRouteImport } from './routes/facilities'
 import { Route as FamilyRouteImport } from './routes/family'
 import { Route as IncidentsRouteImport } from './routes/incidents'
 import { Route as MapRouteImport } from './routes/map'
+import { Route as MissingPersonRouteImport } from './routes/missing-person'
 import { Route as RoadsRouteImport } from './routes/roads'
 import { Route as RoutesRouteImport } from './routes/routes'
 import { Route as SosRouteImport } from './routes/sos'
@@ -56,6 +58,11 @@ const CommandRoute = CommandRouteImport.update({
   path: '/command',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EvacuationRoute = EvacuationRouteImport.update({
+  id: '/evacuation',
+  path: '/evacuation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FacilitiesRoute = FacilitiesRouteImport.update({
   id: '/facilities',
   path: '/facilities',
@@ -74,6 +81,11 @@ const IncidentsRoute = IncidentsRouteImport.update({
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MissingPersonRoute = MissingPersonRouteImport.update({
+  id: '/missing-person',
+  path: '/missing-person',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoadsRoute = RoadsRouteImport.update({
@@ -114,10 +126,12 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AnalyticsRoute
   '/cctv': typeof CctvRoute
   '/command': typeof CommandRoute
+  '/evacuation': typeof EvacuationRoute
   '/facilities': typeof FacilitiesRoute
   '/family': typeof FamilyRoute
   '/incidents': typeof IncidentsRoute
   '/map': typeof MapRoute
+  '/missing-person': typeof MissingPersonRoute
   '/roads': typeof RoadsRoute
   '/routes': typeof RoutesRoute
   '/sos': typeof SosRoute
@@ -132,10 +146,12 @@ export interface FileRoutesByTo {
   '/analytics': typeof AnalyticsRoute
   '/cctv': typeof CctvRoute
   '/command': typeof CommandRoute
+  '/evacuation': typeof EvacuationRoute
   '/facilities': typeof FacilitiesRoute
   '/family': typeof FamilyRoute
   '/incidents': typeof IncidentsRoute
   '/map': typeof MapRoute
+  '/missing-person': typeof MissingPersonRoute
   '/roads': typeof RoadsRoute
   '/routes': typeof RoutesRoute
   '/sos': typeof SosRoute
@@ -151,10 +167,12 @@ export interface FileRoutesById {
   '/analytics': typeof AnalyticsRoute
   '/cctv': typeof CctvRoute
   '/command': typeof CommandRoute
+  '/evacuation': typeof EvacuationRoute
   '/facilities': typeof FacilitiesRoute
   '/family': typeof FamilyRoute
   '/incidents': typeof IncidentsRoute
   '/map': typeof MapRoute
+  '/missing-person': typeof MissingPersonRoute
   '/roads': typeof RoadsRoute
   '/routes': typeof RoutesRoute
   '/sos': typeof SosRoute
@@ -171,10 +189,12 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/cctv'
     | '/command'
+    | '/evacuation'
     | '/facilities'
     | '/family'
     | '/incidents'
     | '/map'
+    | '/missing-person'
     | '/roads'
     | '/routes'
     | '/sos'
@@ -189,10 +209,12 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/cctv'
     | '/command'
+    | '/evacuation'
     | '/facilities'
     | '/family'
     | '/incidents'
     | '/map'
+    | '/missing-person'
     | '/roads'
     | '/routes'
     | '/sos'
@@ -207,10 +229,12 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/cctv'
     | '/command'
+    | '/evacuation'
     | '/facilities'
     | '/family'
     | '/incidents'
     | '/map'
+    | '/missing-person'
     | '/roads'
     | '/routes'
     | '/sos'
@@ -226,10 +250,12 @@ export interface RootRouteChildren {
   AnalyticsRoute: typeof AnalyticsRoute
   CctvRoute: typeof CctvRoute
   CommandRoute: typeof CommandRoute
+  EvacuationRoute: typeof EvacuationRoute
   FacilitiesRoute: typeof FacilitiesRoute
   FamilyRoute: typeof FamilyRoute
   IncidentsRoute: typeof IncidentsRoute
   MapRoute: typeof MapRoute
+  MissingPersonRoute: typeof MissingPersonRoute
   RoadsRoute: typeof RoadsRoute
   RoutesRoute: typeof RoutesRoute
   SosRoute: typeof SosRoute
@@ -282,6 +308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommandRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/evacuation': {
+      id: '/evacuation'
+      path: '/evacuation'
+      fullPath: '/evacuation'
+      preLoaderRoute: typeof EvacuationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/facilities': {
       id: '/facilities'
       path: '/facilities'
@@ -308,6 +341,13 @@ declare module '@tanstack/react-router' {
       path: '/map'
       fullPath: '/map'
       preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/missing-person': {
+      id: '/missing-person'
+      path: '/missing-person'
+      fullPath: '/missing-person'
+      preLoaderRoute: typeof MissingPersonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/roads': {
@@ -362,10 +402,12 @@ const rootRouteChildren: RootRouteChildren = {
   AnalyticsRoute: AnalyticsRoute,
   CctvRoute: CctvRoute,
   CommandRoute: CommandRoute,
+  EvacuationRoute: EvacuationRoute,
   FacilitiesRoute: FacilitiesRoute,
   FamilyRoute: FamilyRoute,
   IncidentsRoute: IncidentsRoute,
   MapRoute: MapRoute,
+  MissingPersonRoute: MissingPersonRoute,
   RoadsRoute: RoadsRoute,
   RoutesRoute: RoutesRoute,
   SosRoute: SosRoute,

@@ -14,7 +14,8 @@ const links = [
   { to: "/routes", label: "Safe routes" },
   { to: "/alerts", label: "Alerts" },
   { to: "/cctv", label: "CCTV" },
-  { to: "/facilities", label: "Facilities" },
+  { to: "/missing-person", label: "Missing person" },
+  { to: "/evacuation", label: "Evacuation" },
 ] as const;
 
 export function SiteHeader() {
@@ -167,6 +168,16 @@ export function SiteFooter() {
             <li>
               <Link to="/alerts" className="hover:underline">
                 Live alerts
+              </Link>
+            </li>
+            <li>
+              <Link to="/missing-person" className="hover:underline">
+                Missing person report
+              </Link>
+            </li>
+            <li>
+              <Link to="/evacuation" className="hover:underline">
+                Safe evacuation
               </Link>
             </li>
             <li>
