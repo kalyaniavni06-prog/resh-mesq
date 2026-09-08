@@ -7,6 +7,7 @@ const items = [
   { to: "/roads", label: "Road conditions" },
   { to: "/vehicles", label: "Vehicles" },
   { to: "/alerts", label: "Alert centre" },
+  { to: "/cctv", label: "CCTV" },
   { to: "/facilities", label: "Hospitals & shelters" },
   { to: "/analytics", label: "Analytics" },
 ] as const;

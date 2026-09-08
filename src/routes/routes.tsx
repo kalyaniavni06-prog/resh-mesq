@@ -4,13 +4,16 @@ import {
   Navigation,
   AlertTriangle,
   CheckCircle2,
+  XCircle,
   Clock,
   Ruler,
   ShieldAlert,
+  ArrowDown,
   ArrowRight,
   Info,
   Truck,
   RefreshCw,
+  Zap,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { SeverityBadge } from "@/components/SeverityBadge";
@@ -37,46 +40,21 @@ export const Route = createFileRoute("/routes")({
   component: RoutePlannerPage,
 });
 
-// Known nodes extracted from seed data
 const NODES = [
-  "Kathmandu",
-  "Lalitpur",
-  "Chitwan",
-  "Dhulikhel",
-  "Morang",
-  "Bhaktapur",
-  "Thankot",
-  "Chabahil",
-  "Koshi",
-  "Itahari",
+  "Kathmandu", "Lalitpur", "Chitwan", "Dhulikhel",
+  "Morang", "Bhaktapur", "Thankot", "Chabahil", "Koshi",
 ];
-
 const VEHICLE_TYPES = ["ambulance", "rescue_truck", "fire_engine", "rescue_boat", "air_ambulance"];
 const EMERGENCY_TYPES = [
-  "flood_rescue",
-  "road_accident",
-  "landslide",
-  "medical_emergency",
-  "fire",
-  "evacuation",
+  "flood_rescue", "road_accident", "landslide",
+  "medical_emergency", "fire", "evacuation",
 ];
 
-// Risk multiplier: higher risk = longer effective travel time
 const RISK_MULTIPLIER: Record<RoadState, number> = {
-  open: 1.0,
-  high_risk: 1.4,
-  flooded: 9999, // impassable (light vehicle)
-  landslide: 9999,
-  bridge_damaged: 9999,
-  blocked: 9999,
+  open: 1.0, high_risk: 1.4,
+  flooded: 9999, landslide: 9999, bridge_damaged: 9999, blocked: 9999,
 };
-
-const SEV_ORDER: Record<Severity, number> = {
-  critical: 3,
-  high: 2,
-  moderate: 1,
-  safe: 0,
-};
+const SEV_ORDER: Record<Severity, number> = { critical: 3, high: 2, moderate: 1, safe: 0 };
 
 interface RouteResult {
   label: string;
@@ -87,27 +65,16 @@ interface RouteResult {
   recommended: boolean;
   reason: string;
   avoidedRoads: Road[];
+  whyReasons: { icon: "check" | "x" | "warn"; text: string }[];
 }
 
-// Simple graph: find all paths via DFS then score them
-function findRoutes(
-  roads: Road[],
-  origin: string,
-  dest: string,
-  vehicleType: string,
-): RouteResult[] {
-  // Heavy vehicles (rescue boats / helicopters) can handle flooded roads
+function findRoutes(roads: Road[], origin: string, dest: string, vehicleType: string): RouteResult[] {
   const canHandleFlooded = vehicleType === "rescue_boat" || vehicleType === "air_ambulance";
-
-  const effectiveCost = (road: Road): number => {
-    if (!canHandleFlooded && (road.state === "flooded" || road.state === "bridge_damaged")) {
-      return 9999;
-    }
+  const effectiveCost = (road: Road) => {
+    if (!canHandleFlooded && (road.state === "flooded" || road.state === "bridge_damaged")) return 9999;
     if (road.state === "landslide" || road.state === "blocked") return 9999;
     return road.base_minutes * RISK_MULTIPLIER[road.state];
   };
-
-  // Build adjacency list (bidirectional)
   type Edge = { road: Road; to: string };
   const graph: Record<string, Edge[]> = {};
   for (const r of roads) {
@@ -116,30 +83,21 @@ function findRoutes(
     graph[r.from_node]!.push({ road: r, to: r.to_node });
     graph[r.to_node]!.push({ road: r, to: r.from_node });
   }
-
-  // DFS – collect all simple paths up to depth 5
   const allPaths: Road[][] = [];
   const dfs = (node: string, path: Road[], visited: Set<string>) => {
-    if (node === dest) {
-      allPaths.push([...path]);
-      return;
-    }
+    if (node === dest) { allPaths.push([...path]); return; }
     if (path.length >= 5) return;
     for (const edge of graph[node] ?? []) {
       if (!visited.has(edge.to)) {
-        visited.add(edge.to);
-        path.push(edge.road);
+        visited.add(edge.to); path.push(edge.road);
         dfs(edge.to, path, visited);
-        path.pop();
-        visited.delete(edge.to);
+        path.pop(); visited.delete(edge.to);
       }
     }
   };
   dfs(origin, [], new Set([origin]));
-
   if (allPaths.length === 0) return [];
 
-  // Score each path
   const scored = allPaths.map((path) => {
     const totalCost = path.reduce((s, r) => s + effectiveCost(r), 0);
     const totalKm = path.reduce((s, r) => s + Number(r.distance_km), 0);
@@ -147,37 +105,34 @@ function findRoutes(
     const maxRiskNum = Math.max(...path.map((r) => SEV_ORDER[r.risk]));
     const maxRisk = (["safe", "moderate", "high", "critical"][maxRiskNum] as Severity) ?? "safe";
     const passable = totalCost < 9000;
-    const avoidedRoads = roads.filter(
-      (r) =>
-        (r.state !== "open") &&
-        !path.find((p) => p.id === r.id),
-    );
+    const avoidedRoads = roads.filter((r) => r.state !== "open" && !path.find((p) => p.id === r.id));
     return { path, totalKm, etaMinutes, maxRisk, maxRiskNum, totalCost, passable, avoidedRoads };
   });
 
-  const passable = scored.filter((s) => s.passable);
+  const passable = scored.filter((s) => s.passable).sort((a, b) => a.totalCost - b.totalCost);
   if (passable.length === 0) return [];
 
-  // Sort by cost
-  passable.sort((a, b) => a.totalCost - b.totalCost);
-
-  // Pick 2 best distinct routes
   const results: RouteResult[] = [];
-
-  passable.slice(0, 4).forEach((s, i) => {
+  passable.slice(0, 4).forEach((s) => {
     if (results.length >= 2) return;
-    const isFirst = results.length === 0;
-    // Deduplicate: skip if path shares all segments with already-added result
     const alreadyAdded = results.some(
       (r) => JSON.stringify(r.path.map((x) => x.id).sort()) === JSON.stringify(s.path.map((x) => x.id).sort()),
     );
     if (alreadyAdded) return;
-
-    const reason = isFirst
-      ? s.maxRiskNum === 0
-        ? "All road segments are currently open and passable. Fastest safe option."
-        : `Best available route. Avoids ${s.avoidedRoads.length} blocked/high-risk segment${s.avoidedRoads.length !== 1 ? "s" : ""}.`
-      : `Alternative path with ${s.avoidedRoads.length} avoided hazard${s.avoidedRoads.length !== 1 ? "s" : ""}. Longer but passable.`;
+    const isFirst = results.length === 0;
+    const hasHazard = s.maxRiskNum > 0;
+    const whyReasons: RouteResult["whyReasons"] = isFirst
+      ? [
+          { icon: "check", text: `Lowest hazard exposure (risk: ${s.maxRisk})` },
+          { icon: "check", text: `Avoids ${s.avoidedRoads.length} blocked/flooded segment${s.avoidedRoads.length !== 1 ? "s" : ""}` },
+          ...(hasHazard ? [] : [{ icon: "check" as const, text: "All segments currently open" }]),
+          { icon: "check", text: `${s.etaMinutes} min estimated travel time` },
+        ]
+      : [
+          { icon: "warn", text: `Higher risk exposure than recommended` },
+          { icon: "check", text: `Still passable — ${s.avoidedRoads.length} hazard${s.avoidedRoads.length !== 1 ? "s" : ""} avoided` },
+          { icon: "warn", text: `Longer ETA: ${s.etaMinutes} min` },
+        ];
 
     results.push({
       label: isFirst ? "Recommended Route" : "Alternative Route",
@@ -186,28 +141,127 @@ function findRoutes(
       etaMinutes: s.etaMinutes,
       maxRisk: s.maxRisk,
       recommended: isFirst,
-      reason,
-      avoidedRoads: s.avoidedRoads.slice(0, 5),
+      reason: isFirst
+        ? s.maxRiskNum === 0
+          ? "All segments open — fastest safe corridor."
+          : `Best available. Avoids ${s.avoidedRoads.length} hazardous segment${s.avoidedRoads.length !== 1 ? "s" : ""}.`
+        : `Alternative path — longer but passable.`,
+      avoidedRoads: s.avoidedRoads.slice(0, 4),
+      whyReasons,
     });
   });
-
   return results;
 }
 
-function RouteCard({ result }: { result: RouteResult }) {
+// ── Step-by-step route flow diagram ──────────────────────────────────────────
+function RouteFlowDiagram({ result }: { result: RouteResult }) {
+  const roadStateIcon = (state: RoadState) => {
+    if (state === "open") return <CheckCircle2 className="h-3.5 w-3.5 text-safe shrink-0" />;
+    if (state === "high_risk") return <AlertTriangle className="h-3.5 w-3.5 text-high-foreground shrink-0" />;
+    return <XCircle className="h-3.5 w-3.5 text-critical shrink-0" />;
+  };
+
+  const nodes = [result.path[0]?.from_node ?? "", ...result.path.map((r) => r.to_node)];
+
   return (
-    <Card className={result.recommended ? "border-primary/50 shadow-md" : ""}>
-      <CardHeader className="pb-3">
+    <div className="flex flex-col items-center gap-0 text-xs" role="list" aria-label="Route steps">
+      {nodes.map((node, i) => {
+        const road = result.path[i];
+        const isOrigin = i === 0;
+        const isDest = i === nodes.length - 1;
+        return (
+          <div key={`${node}-${i}`} className="flex flex-col items-center gap-0 w-full" role="listitem">
+            {/* Node */}
+            <div
+              className={`flex items-center justify-center rounded-full px-3 py-1 font-medium text-xs ${
+                isOrigin
+                  ? "bg-primary text-primary-foreground"
+                  : isDest
+                    ? "bg-safe text-white"
+                    : "bg-secondary text-foreground border border-border"
+              }`}
+            >
+              {isOrigin && <Navigation className="mr-1 h-3 w-3" />}
+              {isDest && <CheckCircle2 className="mr-1 h-3 w-3" />}
+              {node}
+            </div>
+            {/* Road segment */}
+            {road && (
+              <div className="flex flex-col items-center w-full max-w-[220px]">
+                <div className="h-3 w-px bg-border" aria-hidden="true" />
+                <div
+                  className={`w-full rounded-md border px-3 py-1.5 flex items-center gap-2 ${
+                    road.state === "open"
+                      ? "border-safe/20 bg-safe-soft"
+                      : road.state === "high_risk"
+                        ? "border-high/20 bg-high-soft"
+                        : "border-critical/20 bg-critical-soft"
+                  }`}
+                >
+                  {roadStateIcon(road.state)}
+                  <div className="min-w-0 flex-1">
+                    <p className={`font-medium truncate text-[11px] ${road.state === "open" ? "text-safe-foreground" : road.state === "high_risk" ? "text-high-foreground" : "text-critical"}`}>
+                      {road.road_name}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {road.distance_km} km · {road.base_minutes} min
+                    </p>
+                  </div>
+                  <RoadStateBadge state={road.state} />
+                </div>
+                <div className="h-3 w-px bg-border" aria-hidden="true" />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Why this route panel ──────────────────────────────────────────────────────
+function WhyThisRoute({ result }: { result: RouteResult }) {
+  return (
+    <div className="rounded-xl border border-border bg-secondary/40 p-3 space-y-2">
+      <p className="label-caps flex items-center gap-1.5">
+        <Zap className="h-3 w-3 text-primary" />
+        Why this route?
+      </p>
+      <ul className="space-y-1.5" aria-label="Route selection reasons">
+        {result.whyReasons.map((r, i) => (
+          <li key={i} className="flex items-start gap-2 text-xs">
+            {r.icon === "check" ? (
+              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-safe" aria-label="Advantage" />
+            ) : r.icon === "x" ? (
+              <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-critical" aria-label="Disadvantage" />
+            ) : (
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-high-foreground" aria-label="Caution" />
+            )}
+            <span className="text-foreground">{r.text}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ── Side-by-side route comparison card ───────────────────────────────────────
+function RouteComparisonCard({ result }: { result: RouteResult }) {
+  return (
+    <Card
+      className={`overflow-hidden ${result.recommended ? "border-primary/50 ring-1 ring-primary/20 shadow-md" : ""}`}
+    >
+      <CardHeader className="pb-2 pt-4 px-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             {result.recommended ? (
-              <CheckCircle2 className="h-4 w-4 text-safe" />
+              <CheckCircle2 className="h-4 w-4 text-safe" aria-hidden="true" />
             ) : (
-              <Navigation className="h-4 w-4 text-muted-foreground" />
+              <Navigation className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             )}
             <CardTitle className="text-sm">{result.label}</CardTitle>
             {result.recommended && (
-              <Badge variant="outline" className="text-xs border-primary/40 text-primary">
+              <Badge className="text-[10px] bg-primary/10 text-primary border-primary/30">
                 Recommended
               </Badge>
             )}
@@ -215,71 +269,40 @@ function RouteCard({ result }: { result: RouteResult }) {
           <SeverityBadge severity={result.maxRisk} />
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Metrics */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-lg bg-muted p-3 text-center">
-            <p className="label-caps mb-1">Distance</p>
-            <p className="text-lg font-bold flex items-center justify-center gap-1">
-              <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
-              {result.totalKm} km
-            </p>
-          </div>
-          <div className="rounded-lg bg-muted p-3 text-center">
-            <p className="label-caps mb-1">ETA</p>
-            <p className="text-lg font-bold flex items-center justify-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-              {result.etaMinutes} min
-            </p>
-          </div>
-          <div className="rounded-lg bg-muted p-3 text-center">
-            <p className="label-caps mb-1">Segments</p>
-            <p className="text-lg font-bold">{result.path.length}</p>
-          </div>
+
+      <CardContent className="px-4 pb-4 space-y-4">
+        {/* 3 headline metrics */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Distance", value: `${result.totalKm} km`, icon: Ruler },
+            { label: "ETA", value: `${result.etaMinutes} min`, icon: Clock },
+            { label: "Segments", value: result.path.length, icon: ArrowRight },
+          ].map(({ label, value, icon: Icon }) => (
+            <div key={label} className="rounded-lg bg-secondary p-2 text-center">
+              <p className="label-caps mb-0.5">{label}</p>
+              <p className="flex items-center justify-center gap-1 text-sm font-bold">
+                <Icon className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+                {value}
+              </p>
+            </div>
+          ))}
         </div>
 
-        {/* Route path */}
+        {/* Step-by-step flow */}
         <div>
-          <p className="label-caps mb-2">Route Path</p>
-          <div className="flex flex-wrap items-center gap-1">
-            {result.path.map((road, idx) => (
-              <span key={road.id} className="flex items-center gap-1">
-                {idx === 0 && (
-                  <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-                    {road.from_node}
-                  </span>
-                )}
-                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-                  {road.to_node}
-                </span>
-              </span>
-            ))}
-          </div>
+          <p className="label-caps mb-2">Route path</p>
+          <RouteFlowDiagram result={result} />
         </div>
 
-        {/* Road segments */}
-        <div>
-          <p className="label-caps mb-2">Road Segments</p>
-          <ul className="space-y-1.5">
-            {result.path.map((road) => (
-              <li key={road.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate text-foreground">{road.road_name}</span>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-xs text-muted-foreground">{road.distance_km} km</span>
-                  <RoadStateBadge state={road.state} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/* Why this route */}
+        <WhyThisRoute result={result} />
 
-        {/* Avoided roads */}
+        {/* Hazards avoided */}
         {result.avoidedRoads.length > 0 && (
-          <div className="rounded-lg border border-border p-3">
-            <p className="label-caps mb-2 flex items-center gap-1.5">
+          <div>
+            <p className="label-caps mb-1.5 flex items-center gap-1.5">
               <ShieldAlert className="h-3 w-3" />
-              Hazards Avoided
+              Hazards avoided ({result.avoidedRoads.length})
             </p>
             <ul className="space-y-1">
               {result.avoidedRoads.map((r) => (
@@ -291,21 +314,15 @@ function RouteCard({ result }: { result: RouteResult }) {
             </ul>
           </div>
         )}
-
-        {/* Explanation */}
-        <div className="flex items-start gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>{result.reason}</span>
-        </div>
       </CardContent>
     </Card>
   );
 }
 
+// ── Main page ─────────────────────────────────────────────────────────────────
 function RoutePlannerPage() {
   const { data: roads, isLoading } = useRoads();
   const { data: vehicles } = useVehicles();
-
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [vehicleType, setVehicleType] = useState("ambulance");
@@ -317,105 +334,88 @@ function RoutePlannerPage() {
     return findRoutes(roads, origin, destination, vehicleType);
   }, [computed, roads, origin, destination, vehicleType]);
 
-  function handleCompute() {
-    setComputed(false);
-    setTimeout(() => setComputed(true), 50);
-  }
-
   const availableVehicles = vehicles?.filter((v) => v.status === "available") ?? [];
 
   return (
     <div>
       <PageHeader
         title="Safe Route Planner"
-        description="Hazard-aware routing using live road condition data"
-      />
+        description="Hazard-aware routing — Nepal flood scenario road data"
+      >
+        <Badge
+          variant="outline"
+          className="gap-1.5 border-moderate/50 bg-moderate-soft text-moderate-foreground text-[10px]"
+        >
+          DEMO DATA
+        </Badge>
+      </PageHeader>
 
-      <div className="p-6 space-y-6">
-        {/* Disclaimer */}
+      <div className="p-4 sm:p-6 space-y-5">
+
+        {/* Demo note */}
         <div className="flex items-start gap-2 rounded-lg border border-moderate/40 bg-moderate-soft px-4 py-3 text-sm text-moderate-foreground">
-          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
-            <strong>Demo system.</strong> Routes are computed from the Nepal flood scenario road
-            condition data. Always verify conditions with field teams before deployment.
+            <strong>Demo system.</strong> Routes computed from the Nepal flood scenario road
+            condition data. Verify with field teams before real deployment.
           </span>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[360px,1fr]">
-          {/* Planner controls */}
+        <div className="grid gap-5 lg:grid-cols-[300px,1fr]">
+
+          {/* ── Controls panel ─────────────────────────────────────────────── */}
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Route Parameters</CardTitle>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Navigation className="h-4 w-4 text-primary" />
+                  Route Parameters
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {[
+                  { id: "origin", label: "Origin", value: origin, setter: setOrigin, exclude: destination },
+                  { id: "dest", label: "Destination", value: destination, setter: setDestination, exclude: origin },
+                ].map(({ id, label, value, setter, exclude }) => (
+                  <div key={id} className="space-y-1.5">
+                    <Label htmlFor={id}>{label}</Label>
+                    <Select value={value} onValueChange={setter}>
+                      <SelectTrigger id={id}>
+                        <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {NODES.filter((n) => n !== exclude).map((n) => (
+                          <SelectItem key={n} value={n}>{n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
                 <div className="space-y-1.5">
-                  <Label htmlFor="origin">Origin</Label>
-                  <Select value={origin} onValueChange={setOrigin}>
-                    <SelectTrigger id="origin">
-                      <SelectValue placeholder="Select origin node" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {NODES.map((n) => (
-                        <SelectItem key={n} value={n}>
-                          {n}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="destination">Destination</Label>
-                  <Select value={destination} onValueChange={setDestination}>
-                    <SelectTrigger id="destination">
-                      <SelectValue placeholder="Select destination" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {NODES.filter((n) => n !== origin).map((n) => (
-                        <SelectItem key={n} value={n}>
-                          {n}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="veh-type">Vehicle Type</Label>
+                  <Label htmlFor="veh-type">Vehicle type</Label>
                   <Select value={vehicleType} onValueChange={setVehicleType}>
-                    <SelectTrigger id="veh-type">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger id="veh-type"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {VEHICLE_TYPES.map((t) => (
-                        <SelectItem key={t} value={t} className="capitalize">
-                          {t.replace(/_/g, " ")}
-                        </SelectItem>
+                        <SelectItem key={t} value={t} className="capitalize">{t.replace(/_/g, " ")}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-1.5">
-                  <Label htmlFor="em-type">Emergency Type</Label>
+                  <Label htmlFor="em-type">Emergency type</Label>
                   <Select value={emergencyType} onValueChange={setEmergencyType}>
-                    <SelectTrigger id="em-type">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger id="em-type"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {EMERGENCY_TYPES.map((t) => (
-                        <SelectItem key={t} value={t} className="capitalize">
-                          {t.replace(/_/g, " ")}
-                        </SelectItem>
+                        <SelectItem key={t} value={t} className="capitalize">{t.replace(/_/g, " ")}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
                 <Button
                   className="w-full"
-                  onClick={handleCompute}
+                  onClick={() => { setComputed(false); setTimeout(() => setComputed(true), 50); }}
                   disabled={!origin || !destination || origin === destination || isLoading}
                 >
                   <Navigation className="h-4 w-4" />
@@ -427,25 +427,21 @@ function RoutePlannerPage() {
             {/* Available vehicles */}
             {availableVehicles.length > 0 && (
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Truck className="h-4 w-4" />
-                    Available Vehicles ({availableVehicles.length})
+                    Available ({availableVehicles.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   <ul className="divide-y divide-border">
-                    {availableVehicles.slice(0, 5).map((v) => (
+                    {availableVehicles.slice(0, 4).map((v) => (
                       <li key={v.id} className="flex items-center justify-between px-4 py-2">
                         <div>
-                          <p className="text-sm font-semibold">{v.code}</p>
-                          <p className="text-xs text-muted-foreground capitalize">
-                            {v.kind.replace(/_/g, " ")} · {v.home_base ?? "—"}
-                          </p>
+                          <p className="text-xs font-semibold">{v.code}</p>
+                          <p className="text-[10px] text-muted-foreground capitalize">{v.kind.replace(/_/g, " ")} · {v.home_base ?? "—"}</p>
                         </div>
-                        <Badge variant="outline" className="text-xs bg-safe-soft text-safe-foreground border-safe/20">
-                          Available
-                        </Badge>
+                        <Badge variant="outline" className="text-[10px] bg-safe-soft text-safe-foreground border-safe/20">Ready</Badge>
                       </li>
                     ))}
                   </ul>
@@ -453,38 +449,52 @@ function RoutePlannerPage() {
               </Card>
             )}
 
-            {/* Road condition legend */}
+            {/* Legend */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Road Condition Legend</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Road state legend</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {[
-                  { state: "open" as const, desc: "Fully passable — no restrictions" },
-                  { state: "high_risk" as const, desc: "Passable with caution — slope risk" },
-                  { state: "flooded" as const, desc: "Impassable for light vehicles" },
-                  { state: "landslide" as const, desc: "Blocked by debris — avoid" },
-                  { state: "bridge_damaged" as const, desc: "Closed — structural damage" },
-                  { state: "blocked" as const, desc: "Closed — all traffic" },
-                ].map(({ state, desc }) => (
-                  <div key={state} className="flex items-center justify-between gap-3">
+              <CardContent className="space-y-1.5 text-xs">
+                {(
+                  [
+                    { state: "open" as RoadState, icon: CheckCircle2, color: "text-safe", desc: "Fully passable" },
+                    { state: "high_risk" as RoadState, icon: AlertTriangle, color: "text-high-foreground", desc: "Passable — slope risk" },
+                    { state: "flooded" as RoadState, icon: XCircle, color: "text-critical", desc: "Impassable (light vehicles)" },
+                    { state: "landslide" as RoadState, icon: XCircle, color: "text-critical", desc: "Debris — avoid" },
+                    { state: "bridge_damaged" as RoadState, icon: XCircle, color: "text-critical", desc: "Closed — structural damage" },
+                    { state: "blocked" as RoadState, icon: XCircle, color: "text-critical", desc: "Closed — all traffic" },
+                  ] as const
+                ).map(({ state, icon: Icon, color, desc }) => (
+                  <div key={state} className="flex items-center gap-2">
+                    <Icon className={`h-3.5 w-3.5 shrink-0 ${color}`} aria-hidden="true" />
                     <RoadStateBadge state={state} />
-                    <span className="text-xs text-muted-foreground text-right">{desc}</span>
+                    <span className="text-muted-foreground text-[10px]">{desc}</span>
                   </div>
                 ))}
               </CardContent>
             </Card>
           </div>
 
-          {/* Route results */}
+          {/* ── Results ──────────────────────────────────────────────────────── */}
           <div className="space-y-4">
             {!computed ? (
-              <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center">
-                <Navigation className="mb-3 h-8 w-8 text-muted-foreground" />
+              <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center px-6">
+                <Navigation className="mb-3 h-10 w-10 text-muted-foreground" aria-hidden="true" />
                 <p className="text-sm font-medium text-foreground">Select origin and destination</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  The planner will evaluate road conditions and recommend the safest route
+                  The planner will evaluate all known road segments and recommend the safest corridor
                 </p>
+                {/* Static flow preview */}
+                <div className="mt-6 flex items-center gap-1 text-[10px] text-muted-foreground">
+                  {["Origin", "Roads Evaluated", "Hazards Scored", "Safe Path", "Destination"].map(
+                    (s, i, arr) => (
+                      <span key={s} className="flex items-center gap-1">
+                        <span className="rounded bg-secondary px-1.5 py-0.5 font-medium text-foreground">{s}</span>
+                        {i < arr.length - 1 && <ArrowRight className="h-3 w-3" aria-hidden="true" />}
+                      </span>
+                    ),
+                  )}
+                </div>
               </div>
             ) : isLoading ? (
               <div className="space-y-4">
@@ -492,26 +502,74 @@ function RoutePlannerPage() {
                 <Skeleton className="h-48 rounded-xl" />
               </div>
             ) : routes.length === 0 ? (
-              <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-critical/30 bg-critical-soft text-center px-6">
-                <AlertTriangle className="mb-3 h-8 w-8 text-critical" />
-                <p className="text-sm font-semibold text-critical">No passable route found</p>
-                <p className="mt-1 text-xs text-critical/80">
-                  All known road segments between {origin} and {destination} are currently blocked,
-                  flooded, or have landslide damage. Consider air evacuation or waiting for
-                  clearance.
+              <div className="flex flex-col items-center justify-center rounded-xl border border-critical/30 bg-critical-soft px-6 py-12 text-center">
+                <XCircle className="mb-3 h-10 w-10 text-critical" aria-hidden="true" />
+                <p className="text-sm font-semibold text-critical">No passable route</p>
+                <p className="mt-1 text-xs text-critical/80 max-w-xs">
+                  All known road segments between {origin} and {destination} are currently
+                  blocked, flooded, or have landslide damage.
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-4"
-                  onClick={() => setComputed(false)}
-                >
+                <div className="mt-4 rounded-lg border border-critical/20 bg-white/40 px-4 py-3 text-xs text-critical space-y-1">
+                  <p className="font-semibold">Recommended actions:</p>
+                  <p>• Request air ambulance or helicopter evacuation</p>
+                  <p>• Wait for road clearance confirmation</p>
+                  <p>• Contact field teams for alternate access</p>
+                </div>
+                <Button variant="outline" size="sm" className="mt-5" onClick={() => setComputed(false)}>
                   <RefreshCw className="h-3.5 w-3.5" />
                   Try different parameters
                 </Button>
               </div>
             ) : (
-              routes.map((r) => <RouteCard key={r.label} result={r} />)
+              <>
+                {/* Route comparison header — side-by-side summary */}
+                {routes.length === 2 && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {routes.map((r) => (
+                      <div
+                        key={r.label}
+                        className={`rounded-xl border p-3 ${
+                          r.recommended
+                            ? "border-primary/40 bg-primary/5"
+                            : "border-border bg-secondary/40"
+                        }`}
+                        aria-label={`${r.label} summary`}
+                      >
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          {r.recommended ? (
+                            <CheckCircle2 className="h-4 w-4 text-safe" />
+                          ) : (
+                            <Navigation className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <span className="text-sm font-semibold">{r.label}</span>
+                          <SeverityBadge severity={r.maxRisk} />
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                          <div>
+                            <p className="label-caps">ETA</p>
+                            <p className="font-bold text-base">{r.etaMinutes}m</p>
+                          </div>
+                          <div>
+                            <p className="label-caps">Distance</p>
+                            <p className="font-bold text-base">{r.totalKm}km</p>
+                          </div>
+                          <div>
+                            <p className="label-caps">Avoided</p>
+                            <p className="font-bold text-base">{r.avoidedRoads.length}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Full route cards */}
+                <div className="grid gap-5 xl:grid-cols-2">
+                  {routes.map((r) => (
+                    <RouteComparisonCard key={r.label} result={r} />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>

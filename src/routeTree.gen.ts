@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccessibilityRouteImport } from './routes/accessibility'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as CctvRouteImport } from './routes/cctv'
 import { Route as CommandRouteImport } from './routes/command'
 import { Route as FacilitiesRouteImport } from './routes/facilities'
 import { Route as FamilyRouteImport } from './routes/family'
@@ -43,6 +44,11 @@ const AlertsRoute = AlertsRouteImport.update({
 const AnalyticsRoute = AnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CctvRoute = CctvRouteImport.update({
+  id: '/cctv',
+  path: '/cctv',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommandRoute = CommandRouteImport.update({
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/accessibility': typeof AccessibilityRoute
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
+  '/cctv': typeof CctvRoute
   '/command': typeof CommandRoute
   '/facilities': typeof FacilitiesRoute
   '/family': typeof FamilyRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/accessibility': typeof AccessibilityRoute
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
+  '/cctv': typeof CctvRoute
   '/command': typeof CommandRoute
   '/facilities': typeof FacilitiesRoute
   '/family': typeof FamilyRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/accessibility': typeof AccessibilityRoute
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
+  '/cctv': typeof CctvRoute
   '/command': typeof CommandRoute
   '/facilities': typeof FacilitiesRoute
   '/family': typeof FamilyRoute
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/accessibility'
     | '/alerts'
     | '/analytics'
+    | '/cctv'
     | '/command'
     | '/facilities'
     | '/family'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/accessibility'
     | '/alerts'
     | '/analytics'
+    | '/cctv'
     | '/command'
     | '/facilities'
     | '/family'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/accessibility'
     | '/alerts'
     | '/analytics'
+    | '/cctv'
     | '/command'
     | '/facilities'
     | '/family'
@@ -212,6 +224,7 @@ export interface RootRouteChildren {
   AccessibilityRoute: typeof AccessibilityRoute
   AlertsRoute: typeof AlertsRoute
   AnalyticsRoute: typeof AnalyticsRoute
+  CctvRoute: typeof CctvRoute
   CommandRoute: typeof CommandRoute
   FacilitiesRoute: typeof FacilitiesRoute
   FamilyRoute: typeof FamilyRoute
@@ -253,6 +266,13 @@ declare module '@tanstack/react-router' {
       path: '/analytics'
       fullPath: '/analytics'
       preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cctv': {
+      id: '/cctv'
+      path: '/cctv'
+      fullPath: '/cctv'
+      preLoaderRoute: typeof CctvRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/command': {
@@ -340,6 +360,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccessibilityRoute: AccessibilityRoute,
   AlertsRoute: AlertsRoute,
   AnalyticsRoute: AnalyticsRoute,
+  CctvRoute: CctvRoute,
   CommandRoute: CommandRoute,
   FacilitiesRoute: FacilitiesRoute,
   FamilyRoute: FamilyRoute,

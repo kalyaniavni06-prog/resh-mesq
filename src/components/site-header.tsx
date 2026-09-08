@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Menu, ShieldAlert, Siren } from "lucide-react";
+import { Camera, Menu, ShieldAlert, Siren } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { A11yToolbar } from "@/components/a11y-toolbar";
@@ -9,11 +9,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
 const links = [
-  { to: "/incidents", label: "Command centre" },
+  { to: "/command", label: "Command" },
+  { to: "/incidents", label: "Incidents" },
   { to: "/routes", label: "Safe routes" },
   { to: "/alerts", label: "Alerts" },
-  { to: "/facilities", label: "Hospitals & shelters" },
-  { to: "/accessibility", label: "Accessibility" },
+  { to: "/cctv", label: "CCTV" },
+  { to: "/facilities", label: "Facilities" },
 ] as const;
 
 export function SiteHeader() {
@@ -166,6 +167,11 @@ export function SiteFooter() {
             <li>
               <Link to="/alerts" className="hover:underline">
                 Live alerts
+              </Link>
+            </li>
+            <li>
+              <Link to="/cctv" className="hover:underline">
+                CCTV intelligence
               </Link>
             </li>
             <li>
