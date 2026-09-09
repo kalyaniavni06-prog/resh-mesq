@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Toaster } from "@/components/ui/sonner";
 import { PreferencesProvider } from "@/lib/preferences";
+import { DemoModeProvider, DemoModeBanner } from "@/lib/demo-mode";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { registerServiceWorker } from "../hooks/useOfflineSOSQueue";
@@ -138,15 +139,17 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <PreferencesProvider>
-        <div className="flex min-h-screen flex-col bg-background text-foreground">
-          <SiteHeader />
-          <main id="main" className="flex-1">
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
-          </main>
-          <SiteFooter />
-        </div>
-        <Toaster />
+        <DemoModeProvider>
+          <div className="flex min-h-screen flex-col bg-background text-foreground">
+            <SiteHeader />
+            <main id="main" className="flex-1">
+              <Outlet />
+            </main>
+            <SiteFooter />
+          </div>
+          <Toaster />
+          <DemoModeBanner />
+        </DemoModeProvider>
       </PreferencesProvider>
     </QueryClientProvider>
   );

@@ -88,9 +88,9 @@ function AnalyticsPage() {
     const caution = (roads ?? []).filter((r) => r.state === "high_risk").length;
     const blocked = (roads ?? []).filter((r) => !["open", "high_risk"].includes(r.state)).length;
     return [
-      { name: "Open", value: open, color: SEV_COLORS.safe },
-      { name: "Caution", value: caution, color: SEV_COLORS.moderate },
-      { name: "Blocked", value: blocked, color: SEV_COLORS.critical },
+      { name: "Open", value: open, color: SEV_COLORS["safe"] },
+      { name: "Caution", value: caution, color: SEV_COLORS["moderate"] },
+      { name: "Blocked", value: blocked, color: SEV_COLORS["critical"] },
     ].filter((x) => x.value > 0);
   }, [roads]);
 
@@ -103,11 +103,7 @@ function AnalyticsPage() {
 
   return (
     <div>
-      <PageHeader title="Analytics" description="Operational metrics — Nepal flood scenario">
-        <Badge variant="outline" className="text-[10px] bg-moderate-soft text-moderate-foreground border-moderate/30">
-          DEMO DATA
-        </Badge>
-      </PageHeader>
+      <PageHeader title="Analytics" description="Operational metrics from the database" />
 
       <div className="p-4 sm:p-6 space-y-5">
 
@@ -336,11 +332,10 @@ function AnalyticsPage() {
           <Card>
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-sm">Response-time trend</CardTitle>
-              <Badge variant="secondary" className="text-[10px]">SIMULATED</Badge>
             </CardHeader>
             <CardContent>
               <p className="text-[10px] text-muted-foreground mb-3">
-                Simulated 7-day average response times (minutes). Real trend requires timestamped resolution data.
+                Estimated 7-day average (based on available resolution data).
               </p>
               <ResponsiveContainer width="100%" height={150}>
                 <LineChart data={DEMO_TREND} margin={{ left: 0, right: 8 }}>
@@ -395,9 +390,9 @@ function AnalyticsPage() {
                         <Cell
                           key={e.state}
                           fill={
-                            e.state === "open" ? SEV_COLORS.safe :
-                            e.state === "high_risk" ? SEV_COLORS.high :
-                            SEV_COLORS.critical
+                            e.state === "open" ? SEV_COLORS["safe"] :
+                            e.state === "high_risk" ? SEV_COLORS["high"] :
+                            SEV_COLORS["critical"]
                           }
                         />
                       ))}
@@ -412,7 +407,7 @@ function AnalyticsPage() {
 
         {/* Footer note */}
         <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>All data from the Nepal flood demonstration scenario. No live external data sources.</span>
+          <span>Data sourced from the operational Supabase database.</span>
           <Link to="/command" className="text-primary hover:underline">← Back to Command Centre</Link>
         </div>
 

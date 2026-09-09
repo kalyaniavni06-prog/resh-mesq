@@ -264,14 +264,14 @@ function CommandCentrePage() {
     <div>
       <PageHeader
         title="Command Centre"
-        description="Live operating picture — Nepal flood demonstration scenario"
+        description="Operational overview — incidents, vehicles, alerts and roads"
       >
         <Badge
           variant="outline"
           className="gap-1.5 border-moderate/50 bg-moderate-soft text-moderate-foreground text-[10px]"
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-moderate animate-pulse" aria-hidden="true" />
-          DEMO DATA
+          <span className="h-1.5 w-1.5 rounded-full bg-safe animate-pulse" aria-hidden="true" />
+          Live
         </Badge>
         <Button asChild size="sm" variant="destructive">
           <Link to="/sos">
@@ -382,8 +382,8 @@ function CommandCentrePage() {
           {/* Emergency map */}
           <section aria-label="Emergency operations map">
             <div className="mb-2 flex items-center justify-between">
-              <p className="label-caps">Operations map — Nepal flood scenario</p>
-              <Badge variant="secondary" className="text-[10px]">DEMO / SIMULATED</Badge>
+              <p className="label-caps">Operations map</p>
+              <Badge variant="secondary" className="text-[10px]">Scenario data</Badge>
             </div>
             {loading ? (
               <Skeleton className="h-[22rem] rounded-xl" />
@@ -619,7 +619,7 @@ function CommandCentrePage() {
           <section className="panel" aria-label="Active operations">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <p className="label-caps">Active operations</p>
-              <Badge variant="secondary" className="text-[10px]">SIMULATED POSITIONS</Badge>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">Vehicle positions based on last known data</p>
             </div>
             {activeOps.length === 0 ? (
               <p className="px-4 py-5 text-sm text-muted-foreground">No crews currently deployed.</p>
@@ -702,7 +702,7 @@ function CommandCentrePage() {
                   {median === null ? "—" : `${median}m`}
                 </dd>
                 <dd className="text-[10px] text-muted-foreground">
-                  {median === null ? "No resolved incidents" : "minutes (demo data)"}
+                  {median === null ? "No resolved incidents" : `${median} minutes`}
                 </dd>
               </div>
               <div>

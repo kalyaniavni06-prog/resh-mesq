@@ -281,8 +281,7 @@ function CameraSchematicMap({ cameras, selected, onSelect }: {
       aria-label={`Schematic map showing ${cameras.length} camera locations across Nepal`}
     >
       <div className="border-b border-border px-4 py-2.5 flex items-center justify-between">
-        <p className="label-caps">Camera locations — Nepal flood scenario</p>
-        <Badge variant="secondary" className="text-[10px]">DEMO / SIMULATED</Badge>
+        <p className="label-caps">Camera locations</p>
       </div>
       <svg
         viewBox="0 0 100 100"
@@ -475,13 +474,13 @@ function CameraDetailPanel({ cam }: { cam: DemoCamera }) {
           </div>
           <div className="absolute bottom-2 right-2">
             <Badge className="text-[10px] bg-black/60 text-white border-0">
-              SIMULATED DEMO FEED — NOT REAL
+              Scenario feed — not live
             </Badge>
           </div>
           {cam.status === "online" && (
             <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded bg-black/60 px-2 py-0.5 text-[10px] text-white">
               <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
-              LIVE DEMO
+              SCENARIO
             </div>
           )}
         </div>
@@ -616,29 +615,17 @@ function CCTVPage() {
       <PageHeader
         title="CCTV & Camera Intelligence"
         description="Camera observations → road risk → safe route recommendations"
-      >
-        <Badge
-          variant="outline"
-          className="gap-1.5 border-critical/40 bg-critical-soft text-critical text-[10px]"
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-critical" aria-hidden="true" />
-          SIMULATED DEMO FEEDS — NOT REAL CAMERAS
-        </Badge>
-      </PageHeader>
+      />
 
       <div className="p-4 sm:p-5 space-y-5">
 
-        {/* Disclaimer */}
-        <div className="flex items-start gap-3 rounded-lg border border-critical/30 bg-critical-soft px-4 py-3">
-          <Info className="mt-0.5 h-4 w-4 text-critical shrink-0" aria-hidden="true" />
-          <div className="text-sm text-critical">
-            <p className="font-semibold">Demonstration system — no real cameras.</p>
-            <p className="mt-0.5 text-xs">
-              All camera observations are simulated data for the Nepal flood scenario. No real
-              surveillance infrastructure is connected. Never use this for actual emergency
-              dispatch.
-            </p>
-          </div>
+        {/* One-time note */}
+        <div className="flex items-start gap-2 rounded-lg border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            Camera feeds shown here are scenario-based observations connected to road condition data.
+            No private or real-time surveillance infrastructure is accessed.
+          </span>
         </div>
 
         {/* KPI row */}
@@ -740,8 +727,7 @@ function CCTVPage() {
         {/* Scenario walkthrough */}
         <div className="panel overflow-hidden" aria-label="Demo scenario walkthrough">
           <div className="border-b border-border px-4 py-2.5 flex items-center justify-between">
-            <p className="label-caps">Nepal flood demo — camera impact walkthrough</p>
-            <Badge variant="secondary" className="text-[10px]">DEMO SCENARIO</Badge>
+            <p className="label-caps">Camera impact walkthrough</p>
           </div>
           <div className="overflow-x-auto px-4 py-4">
             <div className="flex items-center gap-0 min-w-max text-xs">

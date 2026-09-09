@@ -1,19 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { getSpeechRecognition, type SpeechRecognitionEvent } from "@/lib/speech";
 import {
-  Radio,
-  MapPin,
-  Users,
-  AlertTriangle,
-  CheckCircle2,
-  Info,
-  WifiOff,
-  Wifi,
-  ArrowRight,
-  ShieldAlert,
-  Footprints,
-  Tent,
+  Radio, MapPin, Users, AlertTriangle, CheckCircle2,
+  Info, WifiOff, Wifi, ArrowRight, ShieldAlert,
+  Footprints, Tent, Mic, MicOff, Navigation,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -22,11 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +27,51 @@ type Severity = Database["public"]["Enums"]["severity_level"];
 export const Route = createFileRoute("/sos")({
   component: SOSPage,
 });
+
+// ── Voice input hook ──────────────────────────────────────────────────────────
+function useVoiceInput(onResult: (text: string) => void) {
+  const [listening, setListening] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recRef = useRef<any>(null);
+  const SR = getSpeechRecognition();
+  const supported = SR !== null;
+  function start() {
+    if (!SR) { toast.error("Voice input not supported in this browser"); return; }
+    const rec = new SR();
+    rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 1;
+    rec.onresult = (e: SpeechRecognitionEvent) => { onResult(e.results[0]?.[0]?.transcript ?? ""); };
+    rec.onerror = () => { toast.error("Voice input error"); setListening(false); };
+    rec.onend = () => setListening(false);
+    recRef.current = rec;
+    rec.start();
+    setListening(true);
+  }
+  function stop() { recRef.current?.stop(); setListening(false); }
+  return { listening, start, stop, supported };
+}
+
+// ── GPS hook ──────────────────────────────────────────────────────────────────
+function useGPS(onFix: (lat: number, lng: number, address: string) => void) {
+  const [fetching, setFetching] = useState(false);
+  function getLocation() {
+    if (!navigator.geolocation) { toast.error("Geolocation not available"); return; }
+    setFetching(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+          const json = await res.json() as { display_name?: string };
+          onFix(lat, lng, json.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        } catch { onFix(lat, lng, `${lat.toFixed(5)}, ${lng.toFixed(5)}`); }
+        setFetching(false);
+      },
+      (err) => { toast.error(`Location error: ${err.message}`); setFetching(false); },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
+  return { getLocation, fetching };
+}
 
 const INCIDENT_TYPES = [
   { value: "flood_rescue", label: "Flood / Water rescue", emoji: "🌊" },
@@ -395,6 +428,22 @@ function SOSPage() {
   const [submittedRef, setSubmittedRef] = useState("");
   const [wasQueued, setWasQueued] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [gpsFixed, setGpsFixed] = useState(false);
+
+  // Voice input for location and notes
+  const voiceLocation = useVoiceInput((text) => {
+    setForm((f) => ({ ...f, location_name: text }));
+  });
+  const voiceNotes = useVoiceInput((text) => {
+    setForm((f) => ({ ...f, summary: f.summary ? f.summary + " " + text : text }));
+  });
+
+  // GPS location
+  const gps = useGPS((lat, lng, address) => {
+    setForm((f) => ({ ...f, lat, lng, location_name: address }));
+    setGpsFixed(true);
+    toast.success("Location captured via GPS");
+  });
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -559,13 +608,32 @@ function SOSPage() {
             <CardContent className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="sos-loc">Location description *</Label>
-                <Input
-                  id="sos-loc"
-                  required
-                  value={form.location_name}
-                  onChange={(e) => set("location_name", e.target.value)}
-                  placeholder="e.g. Balkhu riverside settlement, near the bridge"
-                />
+                <div className="flex gap-1.5">
+                  <Input
+                    id="sos-loc"
+                    required
+                    value={form.location_name}
+                    onChange={(e) => set("location_name", e.target.value)}
+                    placeholder="e.g. Balkhu riverside, near the bridge"
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0"
+                    onClick={gps.getLocation} disabled={gps.fetching} title="Use my GPS location" aria-label="Get GPS location">
+                    {gps.fetching ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <Navigation className="h-3.5 w-3.5" />}
+                  </Button>
+                  {voiceLocation.supported && (
+                    <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0"
+                      onClick={() => voiceLocation.listening ? voiceLocation.stop() : voiceLocation.start()}
+                      title="Speak location" aria-label={voiceLocation.listening ? "Stop voice input" : "Speak location"}>
+                      {voiceLocation.listening ? <MicOff className="h-3.5 w-3.5 text-critical" /> : <Mic className="h-3.5 w-3.5" />}
+                    </Button>
+                  )}
+                </div>
+                {gpsFixed && (
+                  <p className="text-[10px] text-safe-foreground flex items-center gap-1 mt-1">
+                    <CheckCircle2 className="h-3 w-3" />GPS location captured: {form.lat.toFixed(4)}, {form.lng.toFixed(4)}
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -672,13 +740,23 @@ function SOSPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="sos-notes">Additional notes (optional)</Label>
-                <Textarea
-                  id="sos-notes"
-                  value={form.summary}
-                  onChange={(e) => set("summary", e.target.value)}
-                  placeholder="Describe the situation: what happened, hazards, anything responders should know…"
-                  rows={4}
-                />
+                <div className="flex gap-1.5 items-start">
+                  <Textarea
+                    id="sos-notes"
+                    value={form.summary}
+                    onChange={(e) => set("summary", e.target.value)}
+                    placeholder="Describe the situation: what happened, hazards, anything responders should know…"
+                    rows={4}
+                    className="flex-1"
+                  />
+                  {voiceNotes.supported && (
+                    <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 mt-0"
+                      onClick={() => voiceNotes.listening ? voiceNotes.stop() : voiceNotes.start()}
+                      title="Speak notes" aria-label={voiceNotes.listening ? "Stop dictating" : "Dictate notes"}>
+                      {voiceNotes.listening ? <MicOff className="h-3.5 w-3.5 text-critical" /> : <Mic className="h-3.5 w-3.5" />}
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

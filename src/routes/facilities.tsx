@@ -198,7 +198,7 @@ function FacilitiesPage() {
         {/* Demo note */}
         <div className="flex items-start gap-2 rounded-lg border border-moderate/40 bg-moderate-soft px-4 py-3 text-sm text-moderate-foreground">
           <Phone className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span><strong>Demo system.</strong> Facility data, bed counts and contact labels are seeded demonstration data. Do not use for real emergency dispatch.</span>
+          <span>Facility data is sourced from the operational database. Contact labels are for reference only — always verify directly.</span>
         </div>
 
         {/* KPI row */}

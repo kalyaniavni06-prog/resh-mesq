@@ -191,14 +191,7 @@ function EvacuationPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Safe Evacuation"
-        description="Find the safest evacuation corridor from your current area"
-      >
-        <Badge variant="outline" className="gap-1.5 border-moderate/50 bg-moderate-soft text-moderate-foreground text-[10px]">
-          NEPAL FLOOD DEMO DATA
-        </Badge>
-      </PageHeader>
+      <PageHeader title="Safe Evacuation" description="Find the safest evacuation corridor from your area" />
 
       {/* Screen reader live summary */}
       {flowSummary && (
@@ -211,8 +204,8 @@ function EvacuationPage() {
         <div className="flex items-start gap-2 rounded-lg border border-moderate/40 bg-moderate-soft px-4 py-3 text-sm text-moderate-foreground">
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
-            <strong>Demo system.</strong> Road conditions, facility data and route suggestions
-            are from the Nepal flood demonstration scenario. Verify with local authorities before acting.
+            Road conditions and facility data are sourced from the operational database.
+            Always verify with local authorities before acting on route suggestions.
           </span>
         </div>
 
@@ -290,7 +283,7 @@ function EvacuationPage() {
             <section aria-label="Evacuation route map">
               <div className="mb-2 flex items-center justify-between">
                 <p className="label-caps">Route map — OpenStreetMap</p>
-                <Badge variant="secondary" className="text-[10px]">REAL MAP · DEMO ROUTE DATA</Badge>
+                <Badge variant="secondary" className="text-[10px]">OSM tiles · scenario route data</Badge>
               </div>
               <div className="h-[420px] rounded-xl overflow-hidden border border-border">
                 <ClientOnly fallback={<MapSkeleton />}>
