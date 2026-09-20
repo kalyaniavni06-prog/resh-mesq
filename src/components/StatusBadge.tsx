@@ -9,11 +9,11 @@ type RoadState = Database["public"]["Enums"]["road_state"];
 
 const INCIDENT_STATUS: Record<IncidentStatus, { label: string; classes: string }> = {
   new: {
-    label: "New",
+    label: "Reported",
     classes: "bg-critical-soft text-critical border-critical/20",
   },
   assigned: {
-    label: "Assigned",
+    label: "Response Assigned",
     classes: "bg-high-soft text-high-foreground border-high/20",
   },
   in_progress: {
