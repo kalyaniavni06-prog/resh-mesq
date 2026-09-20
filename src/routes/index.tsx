@@ -140,10 +140,10 @@ function Landing() {
         <div className="mx-auto max-w-7xl px-4 pt-6">
           <Badge
             variant="outline"
-            className="gap-1.5 border-moderate/50 bg-moderate-soft text-moderate-foreground"
+            className="gap-1.5 border-border bg-secondary text-muted-foreground"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-moderate" aria-hidden="true" />
-            NEPAL FLOOD DISASTER — DEMONSTRATION SCENARIO
+            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" aria-hidden="true" />
+            Emergency response simulation platform
           </Badge>
         </div>
 
@@ -184,8 +184,8 @@ function Landing() {
             </div>
 
             <p className="mt-5 max-w-xl rounded-lg border border-border bg-secondary/50 px-4 py-3 text-xs text-muted-foreground">
-              <strong>Demo system.</strong> All incident data, vehicle positions, hospital contacts
-              and camera feeds are clearly-labelled simulation data for the Nepal flood scenario.
+              <strong>Simulation system.</strong> Incident data, vehicle positions, hospital contacts
+              and camera feeds are seeded sample data for demonstration purposes.
               Do not use for real emergency dispatch.
             </p>
           </div>
@@ -196,8 +196,8 @@ function Landing() {
             aria-label="Nepal disaster scenario — road conditions"
           >
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <p className="label-caps">Nepal Flood Scenario — Road Network</p>
-              <Badge variant="secondary" className="text-[10px]">DEMO DATA</Badge>
+              <p className="label-caps">Road Network Status</p>
+              <Badge variant="secondary" className="text-[10px]">From database</Badge>
             </div>
 
             {/* Mini schematic: origin → roads → destination */}

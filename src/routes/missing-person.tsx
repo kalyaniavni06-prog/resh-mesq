@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { getSpeechRecognition, type SpeechRecognitionEvent } from "@/lib/speech";
+import { usePreferences } from "@/lib/preferences";
 import {
   AlertTriangle, ArrowRight, Camera, CheckCircle2, Clock,
   FileText, Lock, MapPin, Mic, MicOff, Navigation,
-  Search, Upload, User, UserX, X,
+  Search, Upload, User, UserX, X, Volume2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -454,6 +455,16 @@ function ReportForm({ onSuccess }: { onSuccess: (caseId: string) => void }) {
 
 // ── Success screen ────────────────────────────────────────────────────────────
 function SuccessScreen({ caseId, onAnother }: { caseId: string; onAnother: () => void }) {
+  const { announce } = usePreferences();
+
+  // Auto-announce on mount when voice guidance is on
+  const announceDetails = useCallback(() => {
+    announce(
+      `Missing person report submitted. Your case ID is ${caseId}. Share this with the response team. Your report has been logged securely and shared with emergency response teams.`,
+      { speak: true, assertive: true },
+    );
+  }, [announce, caseId]);
+
   return (
     <div className="flex flex-col items-center py-12 text-center space-y-4" role="alert" aria-live="assertive">
       <div className="rounded-full bg-safe-soft p-5"><CheckCircle2 className="h-12 w-12 text-safe" /></div>
@@ -464,6 +475,17 @@ function SuccessScreen({ caseId, onAnother }: { caseId: string; onAnother: () =>
         <p className="font-mono text-3xl font-bold text-primary" aria-label={`Case ID ${caseId}`}>{caseId}</p>
         <p className="mt-1 text-xs text-muted-foreground">Share with the response team</p>
       </div>
+      {/* Read aloud button */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-2"
+        onClick={announceDetails}
+        aria-label="Read case details aloud"
+      >
+        <Volume2 className="h-3.5 w-3.5" />
+        Read aloud
+      </Button>
       <div className="flex gap-3">
         <Button variant="outline" onClick={onAnother}>Report another</Button>
         <Button asChild><Link to="/command">Command Centre</Link></Button>

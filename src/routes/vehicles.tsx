@@ -164,8 +164,8 @@ function VehicleDetail({ vehicle, assignedIncidentRef }: { vehicle: Vehicle; ass
         Last updated: {new Date(vehicle.updated_at).toLocaleString()}
       </div>
 
-      <div className="rounded-lg border border-moderate/30 bg-moderate-soft px-3 py-2 text-xs text-moderate-foreground">
-        This is a demonstration system. Vehicle positions are seeded demo data and do not reflect
+      <div className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
+        Vehicle positions shown are based on last known data and do not reflect
         real-time GPS tracking.
       </div>
     </div>

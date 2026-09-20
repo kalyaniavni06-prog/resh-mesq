@@ -366,9 +366,9 @@ function CrowdMapPage() {
             )}
           </div>
 
-          <div className="m-3 flex items-start gap-2 rounded-lg border border-moderate/30 bg-moderate-soft px-3 py-2 text-[10px] text-moderate-foreground">
+          <div className="m-3 flex items-start gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground">
             <Info className="mt-0.5 h-3 w-3 shrink-0" />
-            Demo system. Pins are stored in the shared demo database and are visible to all users.
+            Pins are stored in the shared database and are visible to all users.
             Do not submit personal or sensitive information.
           </div>
         </div>

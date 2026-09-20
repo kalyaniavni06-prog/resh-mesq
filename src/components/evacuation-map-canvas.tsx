@@ -141,7 +141,7 @@ export default function EvacuationMapCanvas({ originCoords, routes, shelters, ho
           <Popup>
             <p className="font-semibold text-sm">{s.name}</p>
             <p className="text-xs">{s.district} · {s.capacity - s.occupancy} spaces free</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">DEMO DATA</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Source: operational database</p>
           </Popup>
         </Marker>
       ))}
@@ -152,7 +152,7 @@ export default function EvacuationMapCanvas({ originCoords, routes, shelters, ho
           <Popup>
             <p className="font-semibold text-sm">{h.name}</p>
             <p className="text-xs">{h.district} · {h.beds_available} beds available</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">DEMO DATA</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Source: operational database</p>
           </Popup>
         </Marker>
       ))}

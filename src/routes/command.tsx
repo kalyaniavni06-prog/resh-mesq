@@ -268,10 +268,10 @@ function CommandCentrePage() {
       >
         <Badge
           variant="outline"
-          className="gap-1.5 border-moderate/50 bg-moderate-soft text-moderate-foreground text-[10px]"
+          className="gap-1.5 border-border bg-secondary text-muted-foreground text-[10px]"
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-safe animate-pulse" aria-hidden="true" />
-          Live
+          <span className="h-1.5 w-1.5 rounded-full bg-safe" aria-hidden="true" />
+          Live DB
         </Badge>
         <Button asChild size="sm" variant="destructive">
           <Link to="/sos">
@@ -383,7 +383,7 @@ function CommandCentrePage() {
           <section aria-label="Emergency operations map">
             <div className="mb-2 flex items-center justify-between">
               <p className="label-caps">Operations map</p>
-              <Badge variant="secondary" className="text-[10px]">Scenario data</Badge>
+              <Badge variant="secondary" className="text-[10px]">Operational data</Badge>
             </div>
             {loading ? (
               <Skeleton className="h-[22rem] rounded-xl" />

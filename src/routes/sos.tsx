@@ -6,6 +6,7 @@ import {
   Radio, MapPin, Users, AlertTriangle, CheckCircle2,
   Info, WifiOff, Wifi, ArrowRight, ShieldAlert,
   Footprints, Tent, Mic, MicOff, Navigation,
+  Camera, Upload, X, Volume2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -20,6 +21,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useOfflineSOSQueue } from "@/hooks/useOfflineSOSQueue";
 import { useShelters, useRoads, haversineKm } from "@/hooks/useSupabaseData";
+import { supabase } from "@/integrations/supabase/client";
+import { usePreferences } from "@/lib/preferences";
 import type { Database } from "@/integrations/supabase/types";
 
 type Severity = Database["public"]["Enums"]["severity_level"];
@@ -73,15 +76,30 @@ function useGPS(onFix: (lat: number, lng: number, address: string) => void) {
   return { getLocation, fetching };
 }
 
+// ── Photo upload via Supabase Storage ────────────────────────────────────────
+async function uploadSOSPhoto(file: File, reference: string): Promise<string | null> {
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const path = `sos-photos/${reference}-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("emergency-photos")
+    .upload(path, file, { upsert: true });
+  if (error) {
+    console.error("SOS photo upload failed:", error.message);
+    return null;
+  }
+  const { data } = supabase.storage.from("emergency-photos").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 const INCIDENT_TYPES = [
-  { value: "flood_rescue", label: "Flood / Water rescue", emoji: "🌊" },
-  { value: "road_accident", label: "Road accident", emoji: "🚗" },
-  { value: "landslide", label: "Landslide", emoji: "⛰️" },
-  { value: "medical_emergency", label: "Medical emergency", emoji: "🏥" },
+  { value: "medical_emergency", label: "Medical", emoji: "🏥" },
+  { value: "flood_rescue", label: "Flood / Water", emoji: "🌊" },
   { value: "fire", label: "Fire", emoji: "🔥" },
-  { value: "evacuation", label: "Evacuation needed", emoji: "🏃" },
-  { value: "bridge_failure", label: "Bridge / Infrastructure failure", emoji: "🌉" },
-  { value: "other", label: "Other emergency", emoji: "🆘" },
+  { value: "trapped", label: "Trapped / Rescue", emoji: "🆘" },
+  { value: "road_accident", label: "Road Accident", emoji: "🚗" },
+  { value: "landslide", label: "Landslide", emoji: "⛰️" },
+  { value: "evacuation", label: "Evacuation", emoji: "🏃" },
+  { value: "other", label: "Other", emoji: "📢" },
 ];
 
 const SERVICE_TYPES = [
@@ -148,6 +166,24 @@ const GUIDANCE: Record<string, GuidanceDef> = {
       {
         icon: <Tent className="h-4 w-4 text-green-600" />,
         text: "The nearest trauma centre with available beds is shown below. Only transport the patient yourself if response time exceeds 30 minutes.",
+      },
+    ],
+  },
+  trapped: {
+    heading: "Trapped / Rescue Needed",
+    avoidStateFilter: ["flooded", "bridge_damaged", "blocked"],
+    steps: [
+      {
+        icon: <ShieldAlert className="h-4 w-4 text-red-600" />,
+        text: "Stay calm and signal your location with a whistle, torch or brightly coloured cloth.",
+      },
+      {
+        icon: <Radio className="h-4 w-4 text-primary" />,
+        text: "Submit this SOS with your exact location. Do not move unless there is immediate danger.",
+      },
+      {
+        icon: <Tent className="h-4 w-4 text-green-600" />,
+        text: "Conserve your phone battery. A rescue team will be dispatched to your coordinates.",
       },
     ],
   },
@@ -403,9 +439,54 @@ function OfflineBar({ queuedCount }: { queuedCount: number }) {
   );
 }
 
+// ── 4-step SOS status flow ────────────────────────────────────────────────────
+const SOS_STATUS_STEPS = [
+  { label: "Reported", desc: "Report logged" },
+  { label: "Verified", desc: "Team reviews" },
+  { label: "Assigned", desc: "Response dispatched" },
+  { label: "Resolved", desc: "Incident closed" },
+];
+
+function SOSStatusFlow() {
+  return (
+    <div className="w-full" aria-label="SOS report status flow">
+      <p className="label-caps mb-4 text-center">What happens next</p>
+      <div className="flex items-start gap-0">
+        {SOS_STATUS_STEPS.map((step, i) => (
+          <div key={step.label} className="flex flex-1 flex-col items-center text-center relative">
+            {/* Connector line (between steps) */}
+            {i < SOS_STATUS_STEPS.length - 1 && (
+              <div
+                className="absolute left-1/2 top-4 h-px w-full bg-border"
+                aria-hidden="true"
+              />
+            )}
+            <div
+              className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold border-2 ${
+                i === 0
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-card text-muted-foreground border-border"
+              }`}
+            >
+              {i === 0 ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
+            </div>
+            <p className={`mt-2 text-[11px] font-semibold leading-tight ${i === 0 ? "text-primary" : "text-foreground"}`}>
+              {step.label}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug px-1">
+              {step.desc}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 function SOSPage() {
   const navigate = useNavigate();
+  const { announce } = usePreferences();
 
   const { queuedCount, submitOrEnqueue } = useOfflineSOSQueue({
     onDrained: (count) =>
@@ -429,6 +510,10 @@ function SOSPage() {
   const [wasQueued, setWasQueued] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [gpsFixed, setGpsFixed] = useState(false);
+  // Photo upload state
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Voice input for location and notes
   const voiceLocation = useVoiceInput((text) => {
@@ -449,6 +534,14 @@ function SOSPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Photo must be under 5 MB"); return; }
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.incident_type || !form.location_name) return;
@@ -459,7 +552,14 @@ function SOSPage() {
         setWasQueued(true);
         setSubmittedRef("QUEUED");
       } else {
-        setSubmittedRef(result.reference ?? "—");
+        const ref = result.reference ?? "—";
+        setSubmittedRef(ref);
+        // Upload photo non-blocking (report already saved)
+        if (photoFile && ref !== "—") {
+          uploadSOSPhoto(photoFile, ref).catch(() => {});
+        }
+        // TTS announcement
+        announce(`SOS report submitted. Reference number: ${ref}. Your report has been logged and will be reviewed by the response team.`, { assertive: true, speak: true });
       }
       setSubmitted(true);
     } catch {
@@ -473,6 +573,8 @@ function SOSPage() {
     setSubmitted(false);
     setWasQueued(false);
     setSubmittedRef("");
+    setPhotoFile(null);
+    setPhotoPreview(null);
     setForm({
       incident_type: "",
       location_name: "",
@@ -490,7 +592,7 @@ function SOSPage() {
     return (
       <div>
         <PageHeader title="SOS Report" />
-        <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center max-w-lg mx-auto">
           <div
             className={`rounded-full p-6 mb-4 ${wasQueued ? "bg-moderate-soft" : "bg-safe-soft"}`}
           >
@@ -509,10 +611,27 @@ function SOSPage() {
               : "Your emergency report has been logged and will be reviewed by the response team."}
           </p>
           {!wasQueued && (
-            <div className="mt-4 rounded-lg border border-border bg-card px-6 py-4">
-              <p className="label-caps mb-1">Reference Number</p>
-              <p className="text-2xl font-bold font-mono text-primary">{submittedRef}</p>
-            </div>
+            <>
+              <div className="mt-4 rounded-lg border border-border bg-card px-6 py-4 w-full">
+                <p className="label-caps mb-1">Incident Reference Number</p>
+                <p className="text-3xl font-bold font-mono text-primary">{submittedRef}</p>
+                <p className="text-xs text-muted-foreground mt-1">Keep this number — share with responders</p>
+              </div>
+              {/* Read aloud button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 gap-2"
+                onClick={() => announce(`SOS report submitted. Reference: ${submittedRef}. Your emergency report has been logged and will be reviewed by the response team.`, { speak: true, assertive: true })}
+              >
+                <Volume2 className="h-3.5 w-3.5" />
+                Read aloud
+              </Button>
+              {/* 4-step status flow */}
+              <div className="mt-6 w-full rounded-xl border border-border bg-card p-5">
+                <SOSStatusFlow />
+              </div>
+            </>
           )}
           {wasQueued && (
             <div className="mt-4 flex items-center gap-2 rounded-lg border border-moderate/30 bg-moderate-soft px-4 py-3 text-sm text-moderate-foreground">
@@ -550,9 +669,9 @@ function SOSPage() {
         <div className="flex items-start gap-3 rounded-lg border border-critical/30 bg-critical-soft px-4 py-3">
           <Info className="mt-0.5 h-4 w-4 text-critical shrink-0" />
           <div className="text-sm text-critical">
-            <p className="font-semibold">This is a demonstration system.</p>
+            <p className="font-semibold">Not a real dispatch system.</p>
             <p className="mt-0.5">
-              Reports are logged to the demo database only. For a real emergency call{" "}
+              Reports are logged for demonstration purposes only. For a real emergency, call{" "}
               <strong>112</strong> (Nepal emergency services).
             </p>
           </div>
@@ -758,6 +877,56 @@ function SOSPage() {
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Photo upload */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Camera className="h-4 w-4" /> Photo (optional)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                {photoPreview ? (
+                  <div className="relative shrink-0">
+                    <img src={photoPreview} alt="Preview" className="h-20 w-20 rounded-lg object-cover border border-border" />
+                    <button
+                      type="button"
+                      onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
+                      className="absolute -top-1.5 -right-1.5 rounded-full bg-background border border-border p-0.5 hover:bg-accent"
+                      aria-label="Remove photo"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-secondary hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-muted-foreground transition-colors"
+                  >
+                    <Camera className="h-5 w-5 mb-1" aria-hidden="true" />
+                    <span className="text-[10px]">Add photo</span>
+                  </button>
+                )}
+                <div className="flex-1 space-y-1.5 text-xs text-muted-foreground">
+                  <p>A photo helps responders assess the situation quickly.</p>
+                  <p className="text-[10px]">Max 5 MB · JPG / PNG / WEBP</p>
+                  <Button type="button" variant="outline" size="sm" className="gap-1.5 h-7 text-xs" onClick={() => photoInputRef.current?.click()}>
+                    <Upload className="h-3 w-3" /> Choose file
+                  </Button>
+                </div>
+              </div>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handlePhotoChange}
+                aria-label="Upload photo of the emergency"
+              />
             </CardContent>
           </Card>
 

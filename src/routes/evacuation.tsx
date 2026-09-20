@@ -14,8 +14,10 @@ import {
   Route as RouteIcon,
   ShieldAlert,
   Tent,
+  Volume2,
   XCircle,
 } from "lucide-react";
+import { usePreferences } from "@/lib/preferences";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -131,6 +133,7 @@ function EvacuationPage() {
   const { data: roads, isLoading: loadRoads } = useRoads();
   const { data: hospitals } = useHospitals();
   const { data: shelters } = useShelters();
+  const { announce } = usePreferences();
 
   const [origin, setOrigin] = useState("");
   const [computed, setComputed] = useState(false);
@@ -283,7 +286,7 @@ function EvacuationPage() {
             <section aria-label="Evacuation route map">
               <div className="mb-2 flex items-center justify-between">
                 <p className="label-caps">Route map — OpenStreetMap</p>
-                <Badge variant="secondary" className="text-[10px]">OSM tiles · scenario route data</Badge>
+                <Badge variant="secondary" className="text-[10px]">OSM tiles · road condition data</Badge>
               </div>
               <div className="h-[420px] rounded-xl overflow-hidden border border-border">
                 <ClientOnly fallback={<MapSkeleton />}>
@@ -298,7 +301,7 @@ function EvacuationPage() {
                 </ClientOnly>
               </div>
               <p className="mt-1.5 text-[10px] text-muted-foreground">
-                © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap</a> contributors · Map tiles via OSM tile servers · Route data: DEMO scenario
+                © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap</a> contributors · Map tiles via OSM tile servers · Route corridors computed from current road condition data
               </p>
             </section>
 
@@ -307,7 +310,25 @@ function EvacuationPage() {
 
               {/* Safe corridors */}
               <section aria-label="Safe evacuation corridors">
-                <p className="label-caps mb-2">Safe corridors from {origin}</p>
+                <div className="flex items-center justify-between mb-2 gap-2">
+                  <p className="label-caps">Safe corridors from {origin}</p>
+                  {routes.length > 0 && bestRoute && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        announce(
+                          `Evacuation from ${origin}. Best corridor to ${bestRoute.dest}: ${bestRoute.route.etaMinutes} minutes, ${bestRoute.route.totalKm} kilometres, risk level ${bestRoute.route.maxRisk}. ${bestRoute.route.avoidedCount} hazardous road${bestRoute.route.avoidedCount !== 1 ? "s" : ""} avoided. Route: ${bestRoute.route.nodes.join(" to ")}.`,
+                          { speak: true, assertive: true },
+                        )
+                      }
+                      className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label="Read evacuation route aloud"
+                    >
+                      <Volume2 className="h-3 w-3" aria-hidden="true" />
+                      Read aloud
+                    </button>
+                  )}
+                </div>
                 {routes.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-xl border border-critical/30 bg-critical-soft px-4 py-8 text-center">
                     <XCircle className="mb-2 h-8 w-8 text-critical" aria-hidden="true" />

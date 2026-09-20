@@ -191,7 +191,7 @@ function FacilitiesPage() {
 
   return (
     <div>
-      <PageHeader title="Hospitals & Shelters" description="Medical facilities and evacuation shelters — Nepal flood scenario · sorted by distance from Kathmandu" />
+      <PageHeader title="Hospitals & Shelters" description="Medical facilities and evacuation shelters — sorted by distance from Kathmandu" />
 
       <div className="p-4 sm:p-6 space-y-5">
 

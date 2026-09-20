@@ -13,7 +13,9 @@ import {
   Cross,
   PersonStanding,
   Languages,
+  Volume2,
 } from "lucide-react";
+import { usePreferences } from "@/lib/preferences";
 import { PageHeader, StatCard } from "@/components/PageHeader";
 import { SeverityBadge, SeverityDot } from "@/components/SeverityBadge";
 import { Button } from "@/components/ui/button";
@@ -130,9 +132,17 @@ function tx(alert: Alert, lang: Lang, field: "title" | "detail" | "area"): strin
 const SEVERITY_ORDER: Severity[] = ["critical", "high", "moderate", "safe"];
 
 // ── Alert card ────────────────────────────────────────────────────────────────
-function AlertCard({ alert, lang }: { alert: Alert; lang: Lang }) {
+function AlertCard({ alert, lang, onReadAloud }: { alert: Alert; lang: Lang; onReadAloud: (text: string) => void }) {
   const icon = CATEGORY_ICONS[alert.category] ?? <Info className="h-5 w-5" />;
   const colorBar = CATEGORY_COLOR[alert.category] ?? "bg-muted";
+
+  function buildSpeechText() {
+    const title = tx(alert, lang, "title");
+    const area = tx(alert, lang, "area");
+    const detail = alert.detail ? tx(alert, lang, "detail") : "";
+    const sev = alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1);
+    return `${sev} alert. ${title}. Area: ${area}.${detail ? " " + detail : ""}`;
+  }
 
   return (
     <Card className="overflow-hidden">
@@ -165,9 +175,20 @@ function AlertCard({ alert, lang }: { alert: Alert; lang: Lang }) {
                     </Badge>
                   )}
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {formatDistanceToNow(new Date(alert.issued_at), { addSuffix: true })}
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(alert.issued_at), { addSuffix: true })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onReadAloud(buildSpeechText())}
+                    className="flex items-center gap-1 rounded border border-border bg-card px-1.5 py-0.5 text-[10px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    aria-label={`Read alert aloud: ${tx(alert, lang, "title")}`}
+                  >
+                    <Volume2 className="h-3 w-3" aria-hidden="true" />
+                    Read
+                  </button>
+                </div>
               </div>
               <h3 className="mt-1.5 text-sm font-semibold text-foreground">
                 {tx(alert, lang, "title")}
@@ -201,6 +222,7 @@ function AlertCentrePage() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"active" | "all">("active");
   const [lang, setLang] = useState<Lang>("en");
+  const { announce } = usePreferences();
 
   const baseAlerts = (allAlerts ?? []).filter((a) => (tab === "active" ? a.active : true));
 
@@ -232,7 +254,7 @@ function AlertCentrePage() {
     <div>
       <PageHeader
         title="Alert Centre"
-        description="Disaster alerts — Nepal flood scenario"
+        description="Active disaster alerts and situational warnings"
       >
         {/* Language switcher */}
         <div
@@ -361,7 +383,7 @@ function AlertCentrePage() {
                   </div>
                   <div className="space-y-3">
                     {bySeverity[sev].map((alert) => (
-                      <AlertCard key={alert.id} alert={alert} lang={lang} />
+                      <AlertCard key={alert.id} alert={alert} lang={lang} onReadAloud={(text) => announce(text, { speak: true, assertive: true })} />
                     ))}
                   </div>
                 </section>

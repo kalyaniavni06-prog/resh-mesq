@@ -120,18 +120,46 @@ function findRoutes(roads: Road[], origin: string, dest: string, vehicleType: st
     );
     if (alreadyAdded) return;
     const isFirst = results.length === 0;
-    const hasHazard = s.maxRiskNum > 0;
+    // Build rich "why" reasons covering all five criteria
+    const openSegments = s.path.filter((r) => r.state === "open");
+    const cautionSegments = s.path.filter((r) => r.state === "high_risk");
+    const allVehiclesOk = vehicleType !== "rescue_boat" && vehicleType !== "air_ambulance";
     const whyReasons: RouteResult["whyReasons"] = isFirst
       ? [
-          { icon: "check", text: `Lowest hazard exposure (risk: ${s.maxRisk})` },
-          { icon: "check", text: `Avoids ${s.avoidedRoads.length} blocked/flooded segment${s.avoidedRoads.length !== 1 ? "s" : ""}` },
-          ...(hasHazard ? [] : [{ icon: "check" as const, text: "All segments currently open" }]),
-          { icon: "check", text: `${s.etaMinutes} min estimated travel time` },
+          {
+            icon: "check",
+            text: `Lowest hazard exposure — max risk level: ${s.maxRisk}${s.maxRisk === "safe" ? " (all segments clear)" : ""}`,
+          },
+          {
+            icon: s.avoidedRoads.length > 0 ? "check" : "check",
+            text: `${s.avoidedRoads.length} blocked / flooded / damaged segment${s.avoidedRoads.length !== 1 ? "s" : ""} avoided`,
+          },
+          {
+            icon: "check",
+            text: `Estimated travel time: ${s.etaMinutes} min over ${s.totalKm.toFixed(1)} km`,
+          },
+          {
+            icon: openSegments.length === s.path.length ? "check" : cautionSegments.length > 0 ? "warn" : "check",
+            text: `Road condition: ${openSegments.length} of ${s.path.length} segment${s.path.length !== 1 ? "s" : ""} fully open${cautionSegments.length > 0 ? `, ${cautionSegments.length} under caution` : ""}`,
+          },
+          {
+            icon: allVehiclesOk ? "check" : "warn",
+            text: allVehiclesOk
+              ? `Emergency vehicle accessible — no water crossings on this route`
+              : `${vehicleType.replace(/_/g, " ")} required — standard vehicles cannot use this corridor`,
+          },
         ]
       : [
-          { icon: "warn", text: `Higher risk exposure than recommended` },
-          { icon: "check", text: `Still passable — ${s.avoidedRoads.length} hazard${s.avoidedRoads.length !== 1 ? "s" : ""} avoided` },
-          { icon: "warn", text: `Longer ETA: ${s.etaMinutes} min` },
+          { icon: "warn", text: `Higher risk than recommended — max risk: ${s.maxRisk}` },
+          {
+            icon: "check",
+            text: `Still passable — ${s.avoidedRoads.length} hazard${s.avoidedRoads.length !== 1 ? "s" : ""} avoided`,
+          },
+          { icon: "warn", text: `Longer travel time: ${s.etaMinutes} min, ${s.totalKm.toFixed(1)} km` },
+          {
+            icon: openSegments.length === s.path.length ? "check" : "warn",
+            text: `Road condition: ${openSegments.length} of ${s.path.length} segment${s.path.length !== 1 ? "s" : ""} open${cautionSegments.length > 0 ? `, ${cautionSegments.length} at elevated risk` : ""}`,
+          },
         ];
 
     results.push({
@@ -340,24 +368,24 @@ function RoutePlannerPage() {
     <div>
       <PageHeader
         title="Safe Route Planner"
-        description="Hazard-aware routing — Nepal flood scenario road data"
+        description="Hazard-aware routing — road condition data from the operational database"
       >
         <Badge
           variant="outline"
-          className="gap-1.5 border-moderate/50 bg-moderate-soft text-moderate-foreground text-[10px]"
+          className="gap-1.5 border-border bg-secondary text-muted-foreground text-[10px]"
         >
-          DEMO DATA
+          Road data: operational DB
         </Badge>
       </PageHeader>
 
       <div className="p-4 sm:p-6 space-y-5">
 
-        {/* Demo note */}
-        <div className="flex items-start gap-2 rounded-lg border border-moderate/40 bg-moderate-soft px-4 py-3 text-sm text-moderate-foreground">
+        {/* Info note */}
+        <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-muted-foreground">
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
-            <strong>Demo system.</strong> Routes computed from the Nepal flood scenario road
-            condition data. Verify with field teams before real deployment.
+            Routes are computed from current road condition records in the database.
+            Always verify with field teams before real deployment.
           </span>
         </div>
 

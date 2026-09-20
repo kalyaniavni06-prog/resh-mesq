@@ -114,7 +114,7 @@ function AnalyticsPage() {
               <StatCard label="Active Incidents" value={activeInc} icon={<Activity className="h-5 w-5" />} variant="high" />
               <StatCard label="Resolved" value={resolvedInc} icon={<CheckCircle2 className="h-5 w-5" />} variant="safe" />
               <StatCard label="Total Affected" value={totalPeople} sub="across all incidents" icon={<TrendingUp className="h-5 w-5" />} variant="moderate" />
-              <StatCard label="Avg AI Confidence" value={`${avgConf}%`} sub="incident fusion" icon={<BarChart3 className="h-5 w-5" />} />
+              <StatCard label="Report Confidence" value={`${avgConf}%`} sub="avg across incidents" icon={<BarChart3 className="h-5 w-5" />} />
             </>
           )}
         </div>
@@ -328,14 +328,15 @@ function AnalyticsPage() {
             </CardContent>
           </Card>
 
-          {/* Response time trend — DEMO/SIMULATED */}
+          {/* Response time trend — sample data */}
           <Card>
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-sm">Response-time trend</CardTitle>
+              <Badge variant="secondary" className="text-[10px]">Sample data</Badge>
             </CardHeader>
             <CardContent>
               <p className="text-[10px] text-muted-foreground mb-3">
-                Estimated 7-day average (based on available resolution data).
+                Illustrative 7-day pattern — not computed from real resolution timestamps. Actual metrics appear once incidents are resolved.
               </p>
               <ResponsiveContainer width="100%" height={150}>
                 <LineChart data={DEMO_TREND} margin={{ left: 0, right: 8 }}>
