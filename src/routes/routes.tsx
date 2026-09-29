@@ -86,7 +86,7 @@ function findRoutes(roads: Road[], origin: string, dest: string, vehicleType: st
   const allPaths: Road[][] = [];
   const dfs = (node: string, path: Road[], visited: Set<string>) => {
     if (node === dest) { allPaths.push([...path]); return; }
-    if (path.length >= 5) return;
+    if (path.length >= 7) return;  // increased from 5 to find longer alternate routes
     for (const edge of graph[node] ?? []) {
       if (!visited.has(edge.to)) {
         visited.add(edge.to); path.push(edge.road);

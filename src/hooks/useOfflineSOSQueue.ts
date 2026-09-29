@@ -46,10 +46,17 @@ async function drainQueue(
   const queue = readQueue();
   if (queue.length === 0) return;
 
+  // Get session once for all queued items
+  const { data: { session } } = await supabase.auth.getSession();
+
   const results = await Promise.allSettled(
-    queue.map((payload) =>
-      supabase.from("emergency_incidents").insert(payload),
-    ),
+    queue.map((payload) => {
+      const enriched: SOSPayload = {
+        ...payload,
+        created_by: session?.user.id ?? null,
+      };
+      return supabase.from("emergency_incidents").insert(enriched);
+    }),
   );
 
   const succeeded = results.filter((r) => r.status === "fulfilled").length;
@@ -92,13 +99,28 @@ export function useOfflineSOSQueue(options: UseOfflineSOSQueueOptions = {}) {
         enqueue(payload);
         return { queued: true };
       }
+
+      // Attach the current user's id when signed in, so the authenticated
+      // RLS policy passes. When unauthenticated, keep created_by null to
+      // satisfy the anon SOS policy (WITH CHECK (created_by IS NULL)).
+      const { data: { session } } = await supabase.auth.getSession();
+      const enriched: SOSPayload = {
+        ...payload,
+        created_by: session?.user.id ?? null,
+      };
+
       const { data, error } = await supabase
         .from("emergency_incidents")
-        .insert(payload)
+        .insert(enriched)
         .select("reference")
         .single();
+
       if (error) {
-        // Network error even though onLine — queue it
+        // Provide a useful message before queuing
+        const msg = error.code === "42501" || error.message.includes("permission")
+          ? "Permission denied. Report queued for retry."
+          : error.message;
+        console.warn("[SOS] Insert failed:", msg, "— queuing locally.");
         enqueue(payload);
         return { queued: true };
       }

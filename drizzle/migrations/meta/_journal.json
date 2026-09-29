@@ -15,6 +15,20 @@
       "when": 1788614685385,
       "tag": "0001_family_contacts_cameras_public_sos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788700000000,
+      "tag": "0002_missing_persons",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788800000000,
+      "tag": "0003_additional_open_roads",
+      "breakpoints": true
     }
   ]
 }

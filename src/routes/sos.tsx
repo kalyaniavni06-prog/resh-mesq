@@ -562,8 +562,9 @@ function SOSPage() {
         announce(`SOS report submitted. Reference number: ${ref}. Your report has been logged and will be reviewed by the response team.`, { assertive: true, speak: true });
       }
       setSubmitted(true);
-    } catch {
-      toast.error("Failed to submit report. Please try again.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to submit report. Please try again.";
+      toast.error(msg);
     } finally {
       setIsPending(false);
     }

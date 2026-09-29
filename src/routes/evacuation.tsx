@@ -93,7 +93,7 @@ function findEvacRoutes(roads: Road[], origin: string, dest: string): EvacRoute[
   const allPaths: Road[][] = [];
   const dfs = (node: string, path: Road[], visited: Set<string>) => {
     if (node === dest) { allPaths.push([...path]); return; }
-    if (path.length >= 6) return;
+    if (path.length >= 7) return;
     for (const edge of graph[node] ?? []) {
       if (!visited.has(edge.to)) {
         visited.add(edge.to); path.push(edge.road);

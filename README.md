@@ -1,846 +1,227 @@
-# Resh-Mesq
+# RESH MESQ — Emergency Response & Disaster-Safe Route Optimizer
+
+> **Intelligent emergency response platform** for disaster conditions.  
+> Finds the safest usable route for ambulances and rescue teams during floods, landslides and road failures — scoring every corridor for hazard, then explaining the choice.
 
-Create a new project with Supabase enabled.
-PROJECT NAME:
+---
 
-RESH MESQ
+## Problem Statement
 
-PROJECT DESCRIPTION:
+During disasters like floods and landslides, standard navigation apps offer the **shortest** route — not the **safest** one. Roads get flooded, bridges get damaged, and landslides block mountain highways. Emergency responders need a system that:
 
-RESH MESQ is an intelligent emergency response and disaster-safe route optimization platform.
-IMPORTANT: The official name of my website/project is "RESH MESQ". Use "RESH MESQ" as the main website name and branding throughout the entire application. Do not use "Emergency Route Optimizer" as the main website title. "Emergency Route Optimizer" should only describe the functionality of RESH MESQ.
-IMPORTANT: First, connect this project directly to my GitHub repository and push all generated code to GitHub. Also connect the project to Supabase and set up the required database structure. Do not keep the project only inside Lovable. Make sure the complete project is ready for GitHub deployment and Supabase integration.
+- Knows which roads are impassable right now
+- Penalises risky roads (not just blocked ones)
+- Recommends the safest *usable* alternative
+- Explains exactly why each route was chosen or rejected
 
-Build a modern, professional, visually powerful emergency response and disaster-safe route optimization web application.
+---
 
-PROJECT NAME:
+## Solution
 
-Emergency Route Optimizer
+**RESH MESQ** is a full-stack emergency command platform that:
 
-CORE PURPOSE:
+1. Accepts SOS reports and incident submissions from the public
+2. Maintains a live road-condition graph updated by responders
+3. Runs a hazard-aware DFS routing algorithm over the graph
+4. Recommends the safest corridor — not just the fastest
+5. Connects missing-person reports, CCTV observations, and vehicle dispatch
 
-This platform helps emergency responders, ambulances, rescue teams and disaster management authorities find the safest and fastest possible route during emergencies such as floods, landslides, road blockages and other disasters.
+---
 
-The platform should not simply show the shortest route. It should intelligently identify unsafe or inaccessible roads and recommend the best safe alternative route.
+## Key Features
 
-TARGET USE CASE:
+| Feature | Description |
+|---|---|
+| **SOS Report** | Anyone can file an emergency report (anon or signed-in). Works offline — queued in localStorage, sent on reconnect. |
+| **Incident Management** | Full CRUD for emergency incidents. Role-based status workflow: Reported → Response Assigned → In Progress → Resolved. |
+| **Safe Route Planner** | DFS algorithm scores every road corridor. Blocked roads removed. High-risk roads penalised. Explains why each route was chosen. |
+| **Evacuation Corridors** | Find top-3 safest evacuation routes from a node to all reachable destinations. Real Leaflet map with OpenStreetMap tiles. |
+| **Missing Person** | Report missing persons with optional photo upload to Supabase Storage. Auto-generates Case ID. |
+| **Community Map** | Drop pins on a real Leaflet map to mark where help is needed. Realtime via Supabase Realtime. |
+| **CCTV Intelligence** | Scenario camera observations linked to road segments → route impact chain visualised. |
+| **Alert Centre** | Disaster alerts in English and Nepali with severity classification. |
+| **Analytics** | Live charts from Supabase data — incidents, vehicles, road conditions, response trends. |
+| **Accessibility** | Voice guidance (Speech Synthesis API), high contrast, text scaling, keyboard navigation, Nepali language support. |
+| **Offline SOS** | SOS reports queued in localStorage when offline, auto-sent on reconnect. |
 
-A situation like the recent Nepal flood conditions, where roads and bridges may become damaged, blocked or inaccessible. The system should help emergency teams understand which routes are safe and which areas are affected.
+---
 
-MAIN FEATURES:
+## Technology Stack
 
-1. LANDING PAGE
+- **Frontend**: React 19 + TypeScript + Vite + TanStack Router + TanStack Query
+- **Styling**: Tailwind CSS v4 + shadcn/ui components
+- **Backend**: Supabase (PostgreSQL, Auth, Storage, Realtime)
+- **Maps**: Leaflet + react-leaflet + OpenStreetMap
+- **Charts**: Recharts
+- **Deployment**: Vercel (TanStack Start / Nitro SSR)
 
-Create a professional and impactful landing page explaining:
+---
 
-- What Emergency Route Optimizer is
+## Architecture Overview
 
-- Why normal route navigation is not enough during disasters
+```
+Browser (React SPA + SSR)
+    ↓ TanStack Query hooks
+Supabase Client (anon / authenticated JWT)
+    ↓ Row-Level Security
+PostgreSQL (9 tables, 5 enums)
+    + Supabase Auth (JWT sessions)
+    + Supabase Storage (emergency-photos bucket)
+    + Supabase Realtime (community map pins)
+```
 
-- How the system helps emergency responders
+**Routing Algorithm** — client-side DFS over `road_conditions` rows:
+- `blocked` / `bridge_damaged` / `flooded` / `landslide` roads get cost 9999 (effectively impassable for standard vehicles)
+- `high_risk` roads get a 1.4× time multiplier
+- Rescue boats / air ambulances can traverse flooded/damaged roads
+- Returns up to 2 distinct paths sorted by total cost
 
-- Disaster-safe routing
+---
 
-- Real-time emergency intelligence
+## Database & Backend
 
-Include a strong hero section with:
+### Tables
 
-"Every Minute Matters. Every Route Matters."
+| Table | Purpose |
+|---|---|
+| `emergency_incidents` | All incidents — SOS reports, manual entries |
+| `emergency_vehicles` | Fleet with status, location, crew |
+| `road_conditions` | Road network with hazard state |
+| `disaster_alerts` | Active disaster warnings |
+| `hospitals` | Hospital locations and bed availability |
+| `shelters` | Evacuation shelter capacity |
+| `missing_persons` | Missing-person cases with privacy controls |
+| `family_contacts` | User's trusted contacts |
+| `camera_feeds` | Authorised camera metadata |
+| `routes` | Saved route calculations |
 
-and a CTA button: "Open Emergency Dashboard"
+### RLS Policies (key rules)
 
-2. EMERGENCY COMMAND DASHBOARD
+- **Incidents**: Public can read. Authenticated users can insert (with their user id). Anon users can insert SOS reports (created_by must be NULL).
+- **Missing persons**: Anyone can INSERT. Only authenticated users can SELECT. Only admin/dispatcher/responder can UPDATE status.
+- **Vehicles, roads, alerts**: Public read. Staff write.
 
-Create a realistic emergency operations dashboard containing:
+---
 
-- Total active emergencies
+## Accessibility Features
 
-- Available emergency vehicles
+- **Voice guidance** — Speech Synthesis API reads alerts, routes, and status changes
+- **Voice input** — Web Speech API dictation on SOS/missing-person forms
+- **High contrast mode** — WCAG-compliant color overrides
+- **Text scaling** — Normal / Large / Largest
+- **Screen reader** — ARIA labels and `role="img"` on all SVG maps; text fallbacks under `<details>`
+- **Keyboard navigation** — Full tab + Enter flow
+- **Nepali language** — Alert text + voice output in English and Nepali
 
-- Blocked roads
+---
 
-- High-risk areas
+## How to Run Locally
 
-- Active rescue operations
+### Prerequisites
 
-- Emergency alerts
+- [Bun](https://bun.sh) (or Node.js 18+)
+- A Supabase project with the schema applied
 
-- Live status indicators
-
-3. INTERACTIVE MAP
-
-The main focus of the platform should be an interactive map.
-
-Display:
-
-- Emergency vehicles / ambulances
-
-- Hospitals
-
-- Rescue centers
-
-- Evacuation shelters
-
-- Flood affected areas
-
-- Landslide risk areas
-
-- Blocked roads
-
-- Damaged bridges
-
-- Safe roads
-
-Use clear map markers and layers.
-
-4. SMART SAFE ROUTING
-
-Allow the user to select:
-
-- Start location
-
-- Destination
-
-- Emergency type
-
-The system should display:
-
-- Fastest route
-
-- Safest recommended route
-
-- Alternative routes
-
-- Estimated travel time
-
-- Route risk level
-
-If a road is blocked or high-risk, the system should avoid it and recommend another route.
-
-Example:
-
-Road A → Flooded ❌
-
-Bridge B → Damaged ❌
-
-Road C → High Risk ⚠️
-
-Route D → Safe and Accessible ✅
-
-The system should clearly explain WHY a route was selected.
-
-5. DISASTER INTELLIGENCE PANEL
-
-Create a section showing disaster information such as:
-
-- Flood alerts
-
-- Landslide alerts
-
-- Road closures
-
-- Bridge damage
-
-- Weather risk
-
-- Area accessibility
-
-Each alert should have severity levels:
-
-Critical 🔴
-
-High 🟠
-
-Moderate 🟡
-
-Safe 🟢
-
-6. EMERGENCY INCIDENT MANAGEMENT
-
-Allow emergency operators to create and manage incidents.
-
-Fields:
-
-- Incident type
-
-- Location
-
-- Severity
-
-- Number of people affected
-
-- Road accessibility
-
-- Required emergency service
-
-- Current status
-
-Statuses:
-
-New
-
-Assigned
-
-In Progress
-
-Resolved
-
-7. HOSPITAL AND SHELTER LOCATOR
-
-Show nearby:
-
-- Hospitals
-
-- Emergency medical centers
-
-- Evacuation shelters
-
-- Rescue centers
-
-Display their distance and estimated travel time.
-
-8. VEHICLE TRACKING
-
-Create a section where emergency vehicles can be displayed with:
-
-- Vehicle ID
-
-- Current location
-
-- Status
-
-- Destination
-
-- Estimated arrival time
-
-Use simulated real-time movement if actual GPS data is not available.
-
-9. ALERT SYSTEM
-
-Create an emergency alert center with:
-
-- Critical alerts
-
-- Road closure alerts
-
-- Disaster warnings
-
-- Vehicle delays
-
-- New emergency incidents
-
-10. DATA AND ANALYTICS
-
-Create a dashboard showing:
-
-- Average emergency response time
-
-- Number of incidents
-
-- Blocked roads
-
-- Vehicles currently active
-
-- Areas with highest risk
-
-- Emergency response performance
-
-TECHNICAL REQUIREMENTS:
-
-Frontend:
-
-- React
-
-- TypeScript
-
-- Modern responsive design
-
-- Clean reusable components
-
-UI:
-
-- Professional emergency command center style
-
-- Modern dashboard
-
-- Responsive for desktop and mobile
-
-- Dark/light theme support if possible
-
-- Do not make it look like a generic student project
-
-Backend:
-
-- Supabase for database and authentication
-
-DATABASE TABLES:
-
-- users
-
-- emergency_incidents
-
-- emergency_vehicles
-
-- road_conditions
-
-- disaster_alerts
-
-- hospitals
-
-- shelters
-
-- routes
-
-Include realistic relationships between the tables.
-
-AUTHENTICATION:
-
-Create role-based authentication for:
-
-- Admin
-
-- Emergency Dispatcher
-
-- Rescue Team Member
-
-IMPORTANT:
-
-Do not use random meaningless dummy data everywhere. Use realistic simulated emergency data where real-time data is unavailable.
-
-DESIGN GOAL:
-
-The website should feel like a real emergency command and decision-support system used by disaster management authorities.
-
-The central innovation should be:
-
-"Instead of only finding the shortest route, the system evaluates disaster conditions and road accessibility to recommend the safest and most effective emergency route."
-
-Make the application polished, functional and ready for further development. Generate all necessary pages, components, database integration and GitHub-ready code.
-Create a modern, production-quality hackathon web application called:
-
-RESQ MESH
-
-“WHEN NETWORKS FAIL, PEOPLE DON’T HAVE TO.”
-
-PROJECT PURPOSE:
-
-Build an AI-powered emergency response coordination platform that turns a chaotic emergency into one simple, coordinated response workflow.
-
-The core idea is:
-
-ONE TAP → AI ANALYSIS → LOCATION → NEARBY HELP → FAMILY ALERT → RESPONDER DASHBOARD
-
-DESIGN:
-
-Create a premium, futuristic but extremely simple emergency-command-center interface.
-
-Visual style:
-
-- Clean white/light-gray background
-
-- Deep navy text
-
-- Emergency red for critical actions
-
-- Blue for primary actions and technology
-
-- Green for system-online/success states
-
-- Orange/yellow for medium/high severity
-
-- Rounded cards
-
-- Subtle shadows
-
-- Thin borders
-
-- Professional typography
-
-- Responsive desktop/tablet/mobile layout
-
-- No unnecessary clutter
-
-- Emergency actions must be immediately understandable
-
-BRAND:
-
-Logo should visually communicate:
-
-- Shield = protection
-
-- Emergency cross = medical/emergency response
-
-- Connected nodes = mesh network
-
-- Location signal = location intelligence
-
-Brand:
-
-RESQ MESH
-
-CONNECTED EMERGENCY SAFETY
-
-TAGLINE:
-
-“When networks fail, people don’t have to.”
-
-MAIN DASHBOARD:
-
-Header:
-
-- RESQ MESH logo
-
-- System Live indicator
-
-- Current time
-
-- Large red SOS button
-
-Hero section:
-
-Headline:
-
-“When networks fail,
-
-people don’t have to.”
-
-Supporting text:
-
-“One simple emergency workflow connecting the person in danger, family, nearby verified help and responders.”
-
-Primary buttons:
-
-- HOLD SOS 2 SEC
-
-- REPORT INCIDENT
-
-QUICK STATUS CARDS:
-
-1. LOCATION
-
-   Current location ready
-
-2. FAMILY
-
-   3 trusted contacts
-
-3. RESQ MESH
-
-   Relay demo ready
-
-LIVE EMERGENCY MAP:
-
-Create a visually impressive map-style dashboard showing:
-
-- Critical incidents
-
-- High-priority incidents
-
-- Medium-priority incidents
-
-- Location markers
-
-- Emergency clusters
-
-- Live status indicator
-
-- Map legend
-
-Use realistic-looking map styling without requiring a real map API for the MVP.
-
-AI INCIDENT FUSION:
-
-Show an incident card such as:
-
-INCIDENT #RX-1042
-
-ROAD ACCIDENT
-
-CRITICAL
-
-AI CONFIDENCE: 94%
-
-REPORTS FUSED: 7
-
-PEOPLE: 3
-
-Situation summary:
-
-“Two vehicles appear to have collided. Three people may need assistance and traffic is partially blocked.”
-
-Show:
-
-- AI confidence
-
-- Number of reports
-
-- Number of people
-
-- Current response status
-
-- Response timeline
-
-AI FUSION CONCEPT:
-
-Multiple inputs should become ONE incident:
-
-Text report
-
-+
-
-Voice report
-
-+
-
-Camera information
-
-+
-
-Location
-
-+
-
-Multiple citizen reports
-
-↓
-
-AI INCIDENT FUSION
-
-↓
-
-ONE VERIFIED RESPONSE PICTURE
-
-NEARBY HELP:
-
-Create a “WHO CAN HELP?” panel containing:
-
-🚑 Ambulance
-
-🏥 Hospital
-
-👮 Police Response
-
-🚒 Fire Response
-
-Each should display:
-
-- Distance
-
-- Verification status
-
-- CALL button
-
-- MAP/DIRECTIONS button
-
-Add:
-
-NOTIFY SELECTED HELP
-
-For the hackathon MVP, use clearly labeled demo/placeholder contact data.
-
-Do NOT make fake emergency calls.
-
-SOS WORKFLOW:
-
-When the user activates SOS, display a large emergency modal:
-
-“SOS ACTIVE”
-
-“You’re not alone.”
-
-Show:
-
-✓ Location ready
-
-✓ Family alert ready
-
-✓ Nearby help identified
-
-Buttons:
-
-- START AUTHORIZED CAMERA
-
-- ACTIVATE EMERGENCY
-
-Make the flow extremely simple because the user may be under stress.
-
-FAMILY SAFETY:
-
-Create a trusted-family-contact interface.
-
-Show:
-
-- Primary family contact
-
-- Secondary family contact
-
-- Trusted friend
-
-Allow a “TEST FAMILY ALERT” button.
-
-The family alert should visually communicate:
-
-- Emergency detected
-
-- Person may need assistance
-
-- Location shared
-
-- Nearby help identified
-
-CAMERA FEATURE:
-
-Create an “AUTHORIZED LIVE SCENE VIEW”.
-
-Important:
-
-The camera must NEVER secretly activate.
-
-The user must explicitly select:
-
-START AUTHORIZED CAMERA
-
-Then request browser camera permission.
-
-Show:
-
-LIVE SCENE VIEW
-
-USER-AUTHORIZED
-
-Display an AI observation panel with demo information such as:
-
-- 2 vehicles detected
-
-- 3 people visible
-
-- Road obstruction possible
-
-Include:
-
-STOP SHARING
-
-RESQ MESH:
-
-Create a dedicated feature explaining the resilient communication concept.
-
-Visualize:
-
-PHONE
-
- ↓
-
-NEARBY DEVICE
-
- ↓
-
-NEARBY DEVICE
-
- ↓
-
-RESPONSE CENTER
-
-Label:
-
-“MESH RELAY ACTIVE”
-
-Explain:
-
-“If direct connectivity is unavailable, emergency information can be designed to relay through participating nearby devices.”
-
-For the MVP, this can be a simulation/demo.
-
-Do not claim that a real mesh network exists unless actually implemented.
-
-CORE FEATURES SECTION:
-
-Create six feature cards:
-
-1. ONE-TAP SOS
-
-A single emergency workflow instead of complicated menus.
-
-2. AUTHORIZED LIVE SCENE
-
-User-approved camera sharing for responder awareness.
-
-3. FAMILY SAFETY
-
-Trusted contacts can receive emergency alerts.
-
-4. AI INCIDENT FUSION
-
-Combines multiple reports into one clearer incident picture.
-
-5. MESH-READY
-
-Designed for resilient emergency communication.
-
-6. NEARBY HELP
-
-Find verified hospitals, fire, police and ambulance resources.
-
-RESPONDER EXPERIENCE:
-
-Include a command-center style interface showing:
-
-WHO NEEDS HELP?
-
-WHERE IS THE INCIDENT?
-
-WHO CAN HELP?
-
-Incident priorities:
-
-CRITICAL
-
-HIGH
-
-MEDIUM
-
-Show:
-
-- Live incidents
-
-- AI confidence
-
-- Number of reports
-
-- Location
-
-- People affected
-
-- Recommended response
-
-- Response status
-
-UX PRINCIPLE:
-
-The person in danger should see:
-
-ONE BIG SOS BUTTON.
-
-The responder should see:
-
-ONE CLEAR INCIDENT.
-
-The family should receive:
-
-ONE CLEAR ALERT.
-
-The system should turn:
-
-CHAOS → CLARITY.
-
-TECHNICAL REQUIREMENTS:
-
-Use:
-
-- Next.js
-
-- React
-
-- TypeScript
-
-- Modern CSS
-
-- Lucide icons or equivalent
-
-- Responsive design
-
-Implement:
-
-- Component-based architecture
-
-- Clean reusable components
-
-- Responsive mobile layout
-
-- Desktop command-center layout
-
-- Interactive buttons
-
-- Modal dialogs
-
-- Incident selection
-
-- Demo notifications/toasts
-
-- Browser geolocation when permission is granted
-
-- Camera permission only after explicit user action
-
-Do not require unnecessary external APIs for the MVP.
-
-SAFETY:
-
-This is an emergency-response hackathon prototype.
-
-Clearly label:
-
-“AI is decision support. Verify before real-world action.”
-
-Do not:
-
-- Automatically call emergency services
-
-- Invent real hospital/police phone numbers
-
-- Secretly activate cameras
-
-- Automatically contact people without consent
-
-- Present simulated emergency data as real
-
-FINAL EXPERIENCE:
-
-The website should feel like a serious emergency technology platform that could be demonstrated to hackathon judges.
-
-The judge should immediately understand:
-
-1. Someone presses SOS.
-
-2. RESQ identifies their location.
-
-3. AI analyzes the emergency.
-
-4. Nearby help is identified.
-
-5. Family can be notified.
-
-6. Authorized camera information can assist responders.
-
-7. Multiple reports can be fused into one incident.
-
-8. RESQ MESH is designed for resilient communication.
-
-9. Responders get a simple command-center view.
-
-The final emotional message should be:
-
-“IN AN EMERGENCY, EVERY SECOND MATTERS.”
-
-And the product promise:
-
-make dark and light theme changes and add something  unique so this website can be helpful for blind people too please
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/cdc22a45-4e3c-426d-b20f-4c119cdafce6).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+### 1. Clone and install
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+git clone https://github.com/kalyaniavni06-prog/resh-mesq.git
+cd resh-mesq
+npm install
+```
+
+### 2. Set environment variables
+
+Copy `.env.example` to `.env` (or set directly):
+
+```env
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxx
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxx
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_PROJECT_ID=your-project-ref
+```
+
+> ⚠️ **Never commit secrets.** Service role key is server-only.
+
+### 3. Apply database migrations
+
+In the **Supabase dashboard → SQL Editor**, run each migration in order:
+
+1. `drizzle/migrations/0000_create_resh_mesq_core.sql`
+2. `drizzle/migrations/0001_family_contacts_cameras_public_sos.sql`
+3. `drizzle/migrations/0002_missing_persons.sql`
+4. `drizzle/migrations/0003_additional_open_roads.sql` ← **required for routing to work**
+
+### 4. Create Storage bucket
+
+In **Supabase dashboard → Storage**, create a bucket named `emergency-photos` (public access ON).
+
+### 5. Start the dev server
+
+```sh
 npm run dev
 ```
+
+Open [http://localhost:5173](http://localhost:5173)
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_SUPABASE_URL` | ✅ | Supabase project URL (build-time baked into client bundle) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | ✅ | Supabase publishable/anon key (build-time) |
+| `SUPABASE_URL` | ✅ | Same URL for SSR runtime |
+| `SUPABASE_PUBLISHABLE_KEY` | ✅ | Same key for SSR runtime |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only | Admin operations — never expose to client |
+
+---
+
+## Deployment (Vercel)
+
+1. Connect repository in Vercel dashboard
+2. Set all environment variables (`VITE_*` + non-`VITE_*`) in Project Settings → Environment Variables
+3. Build command: `npm run build:vercel`
+4. Framework preset: **TanStack Start**
+
+> ⚠️ Both `VITE_SUPABASE_URL` and `SUPABASE_URL` must be set in Vercel. The `VITE_` prefix is baked into the client bundle at build time; the non-prefixed version is used by the SSR server at runtime.
+
+---
+
+## Scenario / Demo Data
+
+RESH MESQ ships with **seeded scenario data** pre-loaded in the database to demonstrate the platform during presentations when there are no real incidents:
+
+- 6 emergency incidents (Bihar/Nepal flood scenario)
+- 5 hospitals, 5 shelters
+- 8 emergency vehicles
+- 10+ road segments (some blocked, some open — realistic hazard mix)
+- 6 disaster alerts
+- 8 CCTV camera observations (scenario only, not real feeds)
+
+**Separate from real user data:**
+- "Scenario mode" toggle in Incident Management shows seeded incidents alongside real ones
+- Normal mode shows only user-submitted incidents
+- Scenario incidents are clearly labelled with a "Scenario" chip and cannot be edited
+
+---
+
+## Team
+
+Built for emergency response research and hackathon demonstration.  
+Not for real emergency dispatch.
+
+**For real emergencies — call 112 (Nepal) or your local emergency number.**
+
+---
+
+## Screenshots
+
+*(Add screenshots of Command Centre, Route Planner, SOS form, Missing Person report, and Community Map here)*
+
+---
+
+*Built with [Lovable](https://lovable.dev) · Deployed on Vercel · Database on Supabase*

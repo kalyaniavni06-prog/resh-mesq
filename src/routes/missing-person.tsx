@@ -54,7 +54,15 @@ function useMissingPersons() {
       const { data, error } = await supabase
         .from("missing_persons").select("*").order("created_at", { ascending: false });
       if (error) {
-        if (error.message.includes("relation") || error.message.includes("does not exist")) return [] as MissingPerson[];
+        // Table missing or user not authenticated to view cases → return empty list gracefully
+        if (
+          error.message.includes("relation") ||
+          error.message.includes("does not exist") ||
+          error.code === "42501" ||
+          error.message.includes("permission denied")
+        ) {
+          return [] as MissingPerson[];
+        }
         throw error;
       }
       return (data ?? []) as MissingPerson[];
@@ -66,8 +74,34 @@ function useCreateReport() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: TablesInsert<"missing_persons">) => {
-      const { data, error } = await supabase.from("missing_persons").insert(payload).select().single();
-      if (error) throw error;
+      // Attach user id when signed in (helps with audit trail; INSERT allows anon too)
+      const { data: { session } } = await supabase.auth.getSession();
+      const enriched: TablesInsert<"missing_persons"> = {
+        ...payload,
+        created_by: session?.user.id ?? null,
+      };
+
+      const { data, error } = await supabase
+        .from("missing_persons")
+        .insert(enriched)
+        .select()
+        .single();
+
+      if (error) {
+        // Build a human-readable message
+        const code = error.code ?? "";
+        const msg  = error.message ?? "";
+        let friendly = msg;
+        if (code === "42501" || msg.includes("permission denied") || msg.includes("row-level security"))
+          friendly = "Permission denied. The database policy may need to be updated.";
+        else if (code === "42P01" || msg.includes("does not exist"))
+          friendly = "The missing_persons table is not set up yet. Please apply the database migration.";
+        else if (code === "23502" || msg.includes("not-null"))
+          friendly = "A required field is missing. Please check all required fields are filled.";
+        else if (code === "23514" || msg.includes("check"))
+          friendly = "A field value is outside the allowed range (e.g. age must be 0–120).";
+        throw new Error(friendly);
+      }
       return data as MissingPerson;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["missing_persons"] }),
@@ -77,8 +111,18 @@ function useUpdateStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: Status }) => {
-      const { data, error } = await supabase.from("missing_persons").update({ status }).eq("id", id).select().single();
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from("missing_persons")
+        .update({ status })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) {
+        const msg = error.code === "42501" || error.message.includes("permission")
+          ? "You need dispatcher or admin role to update case status."
+          : error.message;
+        throw new Error(msg);
+      }
       return data as MissingPerson;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["missing_persons"] }),
@@ -87,12 +131,22 @@ function useUpdateStatus() {
 
 // ── Photo upload via Supabase Storage ────────────────────────────────────────
 async function uploadPhoto(file: File, caseId: string): Promise<string | null> {
-  const ext = file.name.split(".").pop() ?? "jpg";
-  const path = `missing-persons/${caseId}.${ext}`;
-  const { error } = await supabase.storage.from("emergency-photos").upload(path, file, { upsert: true });
-  if (error) { console.error("Photo upload failed:", error.message); return null; }
-  const { data } = supabase.storage.from("emergency-photos").getPublicUrl(path);
-  return data.publicUrl;
+  try {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+    const path = `missing-persons/${caseId}.${ext}`;
+    const { error } = await supabase.storage
+      .from("emergency-photos")
+      .upload(path, file, { upsert: true });
+    if (error) {
+      console.error("[Photo upload] Storage error:", error.message);
+      return null;
+    }
+    const { data } = supabase.storage.from("emergency-photos").getPublicUrl(path);
+    return data.publicUrl;
+  } catch (err) {
+    console.error("[Photo upload] Unexpected error:", err);
+    return null;
+  }
 }
 
 // ── Voice input hook (Web Speech API) ────────────────────────────────────────
@@ -221,7 +275,14 @@ function CaseCard({ mp, isResponder }: { mp: MissingPerson; isResponder: boolean
 
         {isResponder && nextStatus && mp.status !== "closed" && (
           <Button size="sm" variant="outline" className="w-full text-xs" disabled={update.isPending}
-            onClick={async () => { await update.mutateAsync({ id: mp.id, status: nextStatus }); toast.success(`Marked as: ${STATUS_CFG[nextStatus].label}`); }}>
+            onClick={async () => {
+              try {
+                await update.mutateAsync({ id: mp.id, status: nextStatus });
+                toast.success(`Marked as: ${STATUS_CFG[nextStatus].label}`);
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Failed to update status");
+              }
+            }}>
             <ArrowRight className="h-3.5 w-3.5" />
             Mark as: {STATUS_CFG[nextStatus].label}
           </Button>
@@ -272,28 +333,45 @@ function ReportForm({ onSuccess }: { onSuccess: (caseId: string) => void }) {
     if (!form.full_name || !form.last_known_location || !form.reporter_name || !form.reporter_contact) {
       toast.error("Please fill all required fields"); return;
     }
+    if (form.approximate_age < 0 || form.approximate_age > 120) {
+      toast.error("Age must be between 0 and 120"); return;
+    }
     try {
-      // Create report first to get caseId, then upload photo
+      // Step 1: Insert the report (always saves first, photo is non-blocking)
       const result = await createMutation.mutateAsync({
-        full_name: form.full_name, approximate_age: form.approximate_age, gender: form.gender,
-        clothing_desc: form.clothing_desc || null, identifying_desc: form.identifying_desc || null,
+        full_name: form.full_name,
+        approximate_age: form.approximate_age,
+        gender: form.gender,
+        clothing_desc: form.clothing_desc || null,
+        identifying_desc: form.identifying_desc || null,
         last_known_location: form.last_known_location,
         last_seen_at: new Date(form.last_seen_at).toISOString(),
-        lat: form.lat ?? null, lng: form.lng ?? null,
-        reporter_name: form.reporter_name, reporter_contact: form.reporter_contact,
-        notes: form.notes || null, photo_url: null,
+        lat: form.lat ?? null,
+        lng: form.lng ?? null,
+        reporter_name: form.reporter_name,
+        reporter_contact: form.reporter_contact,
+        notes: form.notes || null,
+        photo_url: null,
       });
 
-      // Upload photo if selected (non-blocking — report already saved)
+      // Step 2: Upload photo if selected (non-blocking — report already saved)
       if (photoFile) {
         const url = await uploadPhoto(photoFile, result.case_id);
         if (url) {
-          await supabase.from("missing_persons").update({ photo_url: url }).eq("id", result.id);
+          // Update with photo URL; ignore errors (report is already saved)
+          await supabase
+            .from("missing_persons")
+            .update({ photo_url: url })
+            .eq("id", result.id);
+        } else {
+          toast.info("Report saved. Photo upload failed — you can re-submit with a photo later.");
         }
       }
+
       onSuccess(result.case_id);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Submission failed");
+      const msg = err instanceof Error ? err.message : "Submission failed";
+      toast.error(msg);
     }
   }
 

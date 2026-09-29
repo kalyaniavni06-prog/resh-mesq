@@ -12,6 +12,49 @@ export type Shelter = Tables<"shelters">;
 export type RouteRow = Tables<"routes">;
 export type Profile = Tables<"profiles">;
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+/**
+ * Turn a Supabase PostgREST error into a human-readable message.
+ * Covers the most common causes so users see useful feedback.
+ */
+export function supabaseErrorMessage(error: { code?: string; message?: string; details?: string | null; hint?: string | null }): string {
+  const code = error.code ?? "";
+  const msg  = error.message ?? "";
+
+  // Auth / RLS
+  if (code === "42501" || msg.includes("row-level security") || msg.includes("permission denied"))
+    return "Permission denied. You may need to sign in to perform this action.";
+  if (msg.includes("JWT") || msg.includes("auth") || msg.includes("401"))
+    return "Authentication required. Please sign in and try again.";
+
+  // Missing table / column
+  if (code === "42P01" || msg.includes("does not exist"))
+    return "Database table not found. The schema may need to be applied.";
+  if (code === "42703")
+    return "Unknown database column. There may be a schema mismatch.";
+
+  // Constraint violations
+  if (code === "23505" || msg.includes("unique"))
+    return "A record with this information already exists.";
+  if (code === "23503" || msg.includes("foreign key"))
+    return "Related record not found. Please check your input.";
+  if (code === "23502" || msg.includes("not-null"))
+    return "A required field is missing. Please fill in all required fields.";
+  if (code === "23514" || msg.includes("check"))
+    return "A field value is outside the allowed range or format.";
+
+  // Storage
+  if (msg.includes("bucket") || msg.includes("storage"))
+    return "Photo storage unavailable. The report was saved without a photo.";
+
+  // Network
+  if (msg.includes("fetch") || msg.includes("network") || msg.includes("Failed to fetch"))
+    return "Network error. Check your connection and try again.";
+
+  // Unknown — show the actual message so devs can debug
+  return msg || "An unexpected error occurred. Please try again.";
+}
+
 // ── Incidents ────────────────────────────────────────────────────────────────
 export function useIncidents() {
   return useQuery({
@@ -21,8 +64,8 @@ export function useIncidents() {
         .from("emergency_incidents")
         .select("*")
         .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as Incident[];
+      if (error) throw new Error(supabaseErrorMessage(error));
+      return (data ?? []) as Incident[];
     },
   });
 }
@@ -36,7 +79,7 @@ export function useIncident(id: string) {
         .select("*")
         .eq("id", id)
         .single();
-      if (error) throw error;
+      if (error) throw new Error(supabaseErrorMessage(error));
       return data as Incident;
     },
     enabled: !!id,
@@ -47,15 +90,28 @@ export function useCreateIncident() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: TablesInsert<"emergency_incidents">) => {
+      // Attach the current user's ID if they are signed in, so the
+      // "incidents insert authed" RLS policy (auth.uid() is not null) passes.
+      const { data: { session } } = await supabase.auth.getSession();
+      const enriched: TablesInsert<"emergency_incidents"> = {
+        ...payload,
+        // Only set created_by when authenticated; anon inserts use the separate
+        // "incidents insert anon sos" policy that requires created_by IS NULL.
+        created_by: session?.user.id ?? null,
+      };
+
       const { data, error } = await supabase
         .from("emergency_incidents")
-        .insert(payload)
+        .insert(enriched)
         .select()
         .single();
-      if (error) throw error;
+
+      if (error) throw new Error(supabaseErrorMessage(error));
       return data as Incident;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["incidents"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["incidents"] });
+    },
   });
 }
 
@@ -75,7 +131,7 @@ export function useUpdateIncident() {
         .eq("id", id)
         .select()
         .single();
-      if (error) throw error;
+      if (error) throw new Error(supabaseErrorMessage(error));
       return data as Incident;
     },
     onSuccess: (_data, { id }) => {
@@ -94,8 +150,8 @@ export function useVehicles() {
         .from("emergency_vehicles")
         .select("*")
         .order("code");
-      if (error) throw error;
-      return data as Vehicle[];
+      if (error) throw new Error(supabaseErrorMessage(error));
+      return (data ?? []) as Vehicle[];
     },
   });
 }
@@ -116,7 +172,7 @@ export function useUpdateVehicle() {
         .eq("id", id)
         .select()
         .single();
-      if (error) throw error;
+      if (error) throw new Error(supabaseErrorMessage(error));
       return data as Vehicle;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["vehicles"] }),
@@ -132,8 +188,8 @@ export function useRoads() {
         .from("road_conditions")
         .select("*")
         .order("road_name");
-      if (error) throw error;
-      return data as Road[];
+      if (error) throw new Error(supabaseErrorMessage(error));
+      return (data ?? []) as Road[];
     },
   });
 }
@@ -149,8 +205,8 @@ export function useAlerts(activeOnly = false) {
         .order("issued_at", { ascending: false });
       if (activeOnly) q = q.eq("active", true);
       const { data, error } = await q;
-      if (error) throw error;
-      return data as Alert[];
+      if (error) throw new Error(supabaseErrorMessage(error));
+      return (data ?? []) as Alert[];
     },
   });
 }
@@ -164,8 +220,8 @@ export function useHospitals() {
         .from("hospitals")
         .select("*")
         .order("name");
-      if (error) throw error;
-      return data as Hospital[];
+      if (error) throw new Error(supabaseErrorMessage(error));
+      return (data ?? []) as Hospital[];
     },
   });
 }
@@ -179,8 +235,8 @@ export function useShelters() {
         .from("shelters")
         .select("*")
         .order("name");
-      if (error) throw error;
-      return data as Shelter[];
+      if (error) throw new Error(supabaseErrorMessage(error));
+      return (data ?? []) as Shelter[];
     },
   });
 }
@@ -193,8 +249,8 @@ export function useRoutes(incidentId?: string) {
       let q = supabase.from("routes").select("*").order("created_at", { ascending: false });
       if (incidentId) q = q.eq("incident_id", incidentId);
       const { data, error } = await q;
-      if (error) throw error;
-      return data as RouteRow[];
+      if (error) throw new Error(supabaseErrorMessage(error));
+      return (data ?? []) as RouteRow[];
     },
   });
 }

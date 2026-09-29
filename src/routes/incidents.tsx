@@ -250,8 +250,9 @@ function IncidentDetailSheet({
         },
       });
       toast.success(`Status → ${STATUS_STEPS.find((s) => s.status === status)?.label}`);
-    } catch {
-      toast.error("Failed to update status");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update status";
+      toast.error(msg);
     }
   }
 
@@ -550,11 +551,12 @@ function IncidentFormDialog({
         toast.success("Incident updated");
       } else {
         await createMutation.mutateAsync(form);
-        toast.success("Incident created");
+        toast.success("Incident created successfully");
       }
       onClose();
-    } catch {
-      toast.error("Failed to save incident");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to save incident";
+      toast.error(msg);
     }
   }
 

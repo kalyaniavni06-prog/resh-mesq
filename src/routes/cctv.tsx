@@ -458,31 +458,144 @@ function CameraDetailPanel({ cam }: { cam: DemoCamera }) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Simulated feed placeholder */}
+        {/* Evidence card — honest scenario illustration */}
         <div
           className={`relative rounded-xl border overflow-hidden ${obs.bg}`}
-          aria-label="Simulated camera preview — not a real feed"
+          aria-label={`Scenario evidence illustration — ${obs.label}`}
         >
-          <div className="flex h-36 items-center justify-center">
-            <div className="text-center">
-              <Camera className={`mx-auto mb-2 h-8 w-8 ${obs.color}`} aria-hidden="true" />
-              <p className={`text-sm font-semibold ${obs.color}`}>{obs.label.toUpperCase()}</p>
-              {cam.status === "offline" && (
-                <p className="text-xs text-muted-foreground mt-1">No signal</p>
-              )}
-            </div>
+          {/* SVG scene illustration per observation type */}
+          <div className="relative h-40 flex items-center justify-center overflow-hidden">
+            {cam.observation === "flooded" && (
+              <svg viewBox="0 0 160 80" className="w-full h-full" aria-hidden="true">
+                {/* Sky */}
+                <rect width="160" height="50" fill="#dbeafe" opacity="0.6" />
+                {/* Road */}
+                <rect x="20" y="38" width="120" height="12" rx="2" fill="#94a3b8" />
+                <rect x="75" y="42" width="10" height="4" rx="1" fill="#e2e8f0" />
+                {/* Flood water */}
+                <ellipse cx="80" cy="56" rx="70" ry="18" fill="#3b82f6" opacity="0.45" />
+                <ellipse cx="80" cy="56" rx="65" ry="14" fill="#60a5fa" opacity="0.35" />
+                {/* Water surface ripples */}
+                <ellipse cx="55" cy="53" rx="12" ry="3" fill="none" stroke="#93c5fd" strokeWidth="0.8" />
+                <ellipse cx="105" cy="57" rx="9" ry="2.5" fill="none" stroke="#93c5fd" strokeWidth="0.8" />
+                {/* Submerged car outline */}
+                <rect x="58" y="42" width="24" height="10" rx="3" fill="#475569" opacity="0.6" />
+                <rect x="62" y="38" width="16" height="8" rx="2" fill="#64748b" opacity="0.5" />
+                {/* Warning sign */}
+                <polygon points="140,10 147,24 133,24" fill="#ef4444" />
+                <text x="140" y="21" textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">!</text>
+                {/* Camera icon */}
+                <rect x="4" y="4" width="12" height="9" rx="2" fill="#1e293b" />
+                <circle cx="10" cy="8.5" r="2.5" fill="#60a5fa" />
+              </svg>
+            )}
+            {cam.observation === "bridge_damage" && (
+              <svg viewBox="0 0 160 80" className="w-full h-full" aria-hidden="true">
+                {/* Sky */}
+                <rect width="160" height="55" fill="#fef3c7" opacity="0.5" />
+                {/* River */}
+                <rect x="0" y="55" width="160" height="25" fill="#60a5fa" opacity="0.4" />
+                {/* Bridge deck — cracked */}
+                <rect x="10" y="44" width="60" height="8" rx="2" fill="#94a3b8" />
+                <rect x="90" y="44" width="60" height="8" rx="2" fill="#94a3b8" />
+                {/* Gap / crack */}
+                <polygon points="70,44 75,52 80,44 85,52 90,44" fill="#fbbf24" opacity="0.9" />
+                {/* Bridge pillars */}
+                <rect x="28" y="44" width="8" height="22" fill="#64748b" />
+                <rect x="124" y="44" width="8" height="22" fill="#64748b" />
+                {/* Warning tape */}
+                <line x1="10" y1="40" x2="150" y2="40" stroke="#ef4444" strokeWidth="2" strokeDasharray="8 4" />
+                <text x="80" y="37" textAnchor="middle" fontSize="6" fill="#ef4444" fontWeight="bold">CLOSED</text>
+                {/* Camera */}
+                <rect x="4" y="4" width="12" height="9" rx="2" fill="#1e293b" />
+                <circle cx="10" cy="8.5" r="2.5" fill="#60a5fa" />
+              </svg>
+            )}
+            {cam.observation === "landslide" && (
+              <svg viewBox="0 0 160 80" className="w-full h-full" aria-hidden="true">
+                {/* Sky */}
+                <rect width="160" height="80" fill="#fef9c3" opacity="0.4" />
+                {/* Mountain */}
+                <polygon points="60,5 110,45 10,45" fill="#6b7280" opacity="0.7" />
+                <polygon points="90,15 140,45 40,45" fill="#9ca3af" opacity="0.6" />
+                {/* Debris / landslide mass */}
+                <ellipse cx="80" cy="52" rx="55" ry="20" fill="#92400e" opacity="0.5" />
+                <ellipse cx="80" cy="56" rx="50" ry="16" fill="#b45309" opacity="0.4" />
+                {/* Rocks */}
+                <circle cx="55" cy="50" r="5" fill="#78350f" opacity="0.8" />
+                <circle cx="75" cy="53" r="7" fill="#92400e" opacity="0.8" />
+                <circle cx="100" cy="48" r="4" fill="#78350f" opacity="0.8" />
+                {/* Road underneath */}
+                <rect x="0" y="63" width="160" height="8" fill="#94a3b8" opacity="0.5" />
+                {/* Warning */}
+                <polygon points="145,8 152,22 138,22" fill="#ef4444" />
+                <text x="145" y="19" textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">!</text>
+                {/* Camera */}
+                <rect x="4" y="4" width="12" height="9" rx="2" fill="#1e293b" />
+                <circle cx="10" cy="8.5" r="2.5" fill="#60a5fa" />
+              </svg>
+            )}
+            {cam.observation === "clear" && (
+              <svg viewBox="0 0 160 80" className="w-full h-full" aria-hidden="true">
+                {/* Sky */}
+                <rect width="160" height="55" fill="#d1fae5" opacity="0.5" />
+                {/* Road */}
+                <rect x="0" y="48" width="160" height="14" fill="#94a3b8" />
+                <rect x="72" y="53" width="16" height="4" rx="1" fill="#e2e8f0" />
+                {/* Trees */}
+                <circle cx="25" cy="42" r="10" fill="#16a34a" opacity="0.7" />
+                <rect x="23" y="48" width="4" height="8" fill="#854d0e" opacity="0.6" />
+                <circle cx="135" cy="40" r="10" fill="#22c55e" opacity="0.7" />
+                <rect x="133" y="48" width="4" height="8" fill="#854d0e" opacity="0.6" />
+                {/* Car */}
+                <rect x="65" y="46" width="30" height="10" rx="3" fill="#3b82f6" opacity="0.8" />
+                <rect x="69" y="41" width="22" height="9" rx="2" fill="#60a5fa" opacity="0.7" />
+                {/* Green check */}
+                <circle cx="145" cy="12" r="10" fill="#22c55e" opacity="0.9" />
+                <polyline points="140,12 144,16 151,8" fill="none" stroke="white" strokeWidth="2" />
+                {/* Camera */}
+                <rect x="4" y="4" width="12" height="9" rx="2" fill="#1e293b" />
+                <circle cx="10" cy="8.5" r="2.5" fill="#60a5fa" />
+              </svg>
+            )}
+            {(cam.observation === "heavy_traffic" || cam.observation === "obstructed" || cam.observation === "low_visibility") && (
+              <svg viewBox="0 0 160 80" className="w-full h-full" aria-hidden="true">
+                {/* Sky */}
+                <rect width="160" height="50" fill={cam.observation === "low_visibility" ? "#d1d5db" : "#fef3c7"} opacity="0.5" />
+                {/* Fog if low_visibility */}
+                {cam.observation === "low_visibility" && (
+                  <>
+                    <ellipse cx="60" cy="35" rx="50" ry="20" fill="white" opacity="0.4" />
+                    <ellipse cx="110" cy="30" rx="40" ry="18" fill="white" opacity="0.35" />
+                  </>
+                )}
+                {/* Road */}
+                <rect x="0" y="50" width="160" height="14" fill="#94a3b8" />
+                {/* Multiple vehicles (traffic) */}
+                <rect x="10" y="46" width="24" height="10" rx="2" fill="#ef4444" opacity="0.8" />
+                <rect x="40" y="46" width="24" height="10" rx="2" fill="#f97316" opacity="0.8" />
+                <rect x="70" y="46" width="24" height="10" rx="2" fill="#eab308" opacity="0.8" />
+                <rect x="100" y="46" width="24" height="10" rx="2" fill="#6b7280" opacity="0.8" />
+                {/* Warning sign */}
+                <polygon points="140,8 148,24 132,24" fill="#f59e0b" />
+                <text x="140" y="20" textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">!</text>
+                {/* Camera */}
+                <rect x="4" y="4" width="12" height="9" rx="2" fill="#1e293b" />
+                <circle cx="10" cy="8.5" r="2.5" fill="#60a5fa" />
+              </svg>
+            )}
           </div>
-          <div className="absolute bottom-2 right-2">
+
+          {/* Labels */}
+          <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
             <Badge className="text-[10px] bg-black/60 text-white border-0">
-              Scenario feed — not live
+              Scenario illustration
             </Badge>
           </div>
-          {cam.status === "online" && (
-            <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded bg-black/60 px-2 py-0.5 text-[10px] text-white">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
-              SCENARIO
-            </div>
-          )}
+          <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded bg-black/60 px-2 py-0.5 text-[10px] text-white">
+            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${cam.status === "online" ? "bg-green-400 animate-pulse" : "bg-gray-400"}`} aria-hidden="true" />
+            {cam.status === "online" ? "SCENARIO" : "OFFLINE"}
+          </div>
         </div>
 
         {/* Observation detail */}
