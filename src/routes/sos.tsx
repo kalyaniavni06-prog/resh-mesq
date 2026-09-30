@@ -404,7 +404,7 @@ function OfflineBar({ queuedCount }: { queuedCount: number }) {
     typeof navigator !== "undefined" ? navigator.onLine : true,
   );
 
-  useState(() => {
+  useEffect(() => {
     const up = () => setOnline(true);
     const down = () => setOnline(false);
     window.addEventListener("online", up);
@@ -413,7 +413,7 @@ function OfflineBar({ queuedCount }: { queuedCount: number }) {
       window.removeEventListener("online", up);
       window.removeEventListener("offline", down);
     };
-  });
+  }, []);
 
   if (online && queuedCount === 0) return null;
 

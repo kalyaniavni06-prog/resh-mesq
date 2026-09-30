@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { ClientOnly } from "@tanstack/react-router";
-import { MapPin, Plus, Trash2, RefreshCw, Info, X } from "lucide-react";
+import { ChevronDown, ChevronUp, MapPin, Plus, Trash2, RefreshCw, Info, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,8 @@ function CrowdMapPage() {
   const [pinCategory, setPinCategory] = useState<PinCategory>("trapped");
   const [pinNote, setPinNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Mobile: show/hide the bottom panel
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   const loadPins = useCallback(async () => {
     setLoading(true);
@@ -130,6 +132,8 @@ function CrowdMapPage() {
 
   function handleMapClick(lat: number, lng: number) {
     setPendingLatLng({ lat, lng });
+    // On mobile, automatically open the sheet when pin is placed
+    setMobileSheetOpen(true);
   }
 
   async function submitPin() {
@@ -187,8 +191,10 @@ function CrowdMapPage() {
           size="sm"
           variant={dropMode ? "destructive" : "default"}
           onClick={() => {
-            setDropMode((v) => !v);
+            const next = !dropMode;
+            setDropMode(next);
             setPendingLatLng(null);
+            if (next) setMobileSheetOpen(true);
           }}
         >
           {dropMode ? (
@@ -205,9 +211,9 @@ function CrowdMapPage() {
         </Button>
       </PageHeader>
 
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-        {/* Map */}
-        <div className="relative flex-1">
+      <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden lg:flex-row">
+        {/* Map fills remaining space */}
+        <div className="relative flex-1 min-h-0">
           {dropMode && !pendingLatLng && (
             <div className="absolute top-3 left-1/2 z-[1000] -translate-x-1/2 rounded-lg border border-primary/40 bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg">
               Click anywhere on the map to place your pin
@@ -227,7 +233,7 @@ function CrowdMapPage() {
           </ClientOnly>
         </div>
 
-        {/* Sidebar */}
+        {/* Sidebar — desktop only */}
         <div className="hidden w-72 shrink-0 flex-col overflow-y-auto border-l border-border bg-card lg:flex">
           {dropMode && (
             <Card className="m-3 border-primary/40 bg-primary/5">
@@ -372,6 +378,130 @@ function CrowdMapPage() {
             Do not submit personal or sensitive information.
           </div>
         </div>
+      </div>
+
+      {/* ── Mobile bottom sheet (visible on < lg screens) ────────────────── */}
+      <div className="lg:hidden">
+        {/* Collapsed handle bar */}
+        <button
+          type="button"
+          className="flex w-full items-center justify-between border-t border-border bg-card px-4 py-3"
+          onClick={() => setMobileSheetOpen((v) => !v)}
+          aria-expanded={mobileSheetOpen}
+          aria-label={mobileSheetOpen ? "Hide map panel" : "Show map panel"}
+        >
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
+            {dropMode && pendingLatLng ? "Confirm your pin" : dropMode ? "Select category & place pin" : `${pins.length} pin${pins.length !== 1 ? "s" : ""} on map`}
+          </div>
+          {mobileSheetOpen
+            ? <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            : <ChevronUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          }
+        </button>
+
+        {mobileSheetOpen && (
+          <div className="border-t border-border bg-card max-h-[50vh] overflow-y-auto">
+            {/* Drop-pin form */}
+            {dropMode && (
+              <div className="p-3 border-b border-border">
+                <p className="text-xs font-semibold text-primary mb-2">
+                  {pendingLatLng ? `Pin at ${pendingLatLng.lat.toFixed(4)}, ${pendingLatLng.lng.toFixed(4)}` : "Tap on the map above to place a pin"}
+                </p>
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Category</Label>
+                    <Select value={pinCategory} onValueChange={(v) => setPinCategory(v as PinCategory)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PIN_INCIDENT_TYPES.map((cat) => (
+                          <SelectItem key={cat} value={cat} className="text-xs">
+                            {PIN_CATEGORIES[cat].label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {pendingLatLng && (
+                    <>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Note (optional)</Label>
+                        <Textarea
+                          value={pinNote}
+                          onChange={(e) => setPinNote(e.target.value)}
+                          placeholder="e.g. 3 people on rooftop, no boat access"
+                          rows={2}
+                          className="text-xs"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" className="flex-1" onClick={async () => { await submitPin(); setMobileSheetOpen(false); }} disabled={submitting}>
+                          {submitting ? "Saving…" : "Confirm pin"}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setPendingLatLng(null)}>
+                          Re-pick
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Pin category legend */}
+            <div className="px-3 py-2 border-b border-border">
+              <div className="flex flex-wrap gap-2">
+                {PIN_INCIDENT_TYPES.map((cat) => {
+                  const meta = PIN_CATEGORIES[cat];
+                  const count = pins.filter((p) => p.incident_type === cat).length;
+                  return (
+                    <div key={cat} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: meta.hex }} aria-hidden="true" />
+                      {meta.label}
+                      {count > 0 && <Badge variant="secondary" className="text-[10px] h-4 px-1 ml-0.5">{count}</Badge>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Recent pins list */}
+            <div>
+              {loading ? (
+                <p className="px-3 py-2 text-xs text-muted-foreground">Loading pins…</p>
+              ) : pins.length === 0 ? (
+                <p className="px-3 py-3 text-xs text-muted-foreground text-center">No pins yet. Tap "Drop pin" above then tap the map.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {pins.slice(0, 5).map((pin) => {
+                    const meta = PIN_CATEGORIES[pin.incident_type as PinCategory];
+                    return (
+                      <li key={pin.id} className="flex items-center gap-2.5 px-3 py-2">
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: meta?.hex ?? "#888" }} aria-hidden="true" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium truncate">{meta?.label ?? pin.incident_type}</p>
+                          <p className="text-[10px] text-muted-foreground">{pin.lat.toFixed(3)}, {pin.lng.toFixed(3)}</p>
+                        </div>
+                        <button onClick={() => deletePin(pin.id)} className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive" aria-label="Remove pin">
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {pins.length > 5 && (
+                    <li className="px-3 py-1.5 text-xs text-muted-foreground text-center">{pins.length - 5} more pin{pins.length - 5 !== 1 ? "s" : ""} — scroll the map to see all</li>
+                  )}
+                </ul>
+              )}
+            </div>
+
+            <div className="px-3 py-2 text-[10px] text-muted-foreground border-t border-border">
+              Pins are stored in the shared database and visible to all users. Do not submit personal information.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

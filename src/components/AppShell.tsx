@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Command Centre", icon: LayoutDashboard },
+  { to: "/command", label: "Command Centre", icon: LayoutDashboard },
   { to: "/incidents", label: "Incidents", icon: AlertTriangle },
   { to: "/vehicles", label: "Vehicles", icon: Truck },
   { to: "/routes", label: "Route Planner", icon: Route },

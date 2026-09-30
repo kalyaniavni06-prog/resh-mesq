@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { BedDouble, Hospital, MapPin, Phone, Search, ShieldCheck, Tent, Users, Navigation } from "lucide-react";
+import { BedDouble, Hospital, MapPin, Phone, Search, ShieldCheck, Tent, Users, Navigation, WifiOff, RefreshCw } from "lucide-react";
 import { PageHeader, StatCard } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -160,11 +160,12 @@ function ShelterCard({ s, dist }: { s: Shelter; dist: number }) {
 }
 
 function FacilitiesPage() {
-  const { data: hospitals, isLoading: loadH } = useHospitals();
-  const { data: shelters, isLoading: loadS } = useShelters();
+  const { data: hospitals, isLoading: loadH, error: errH, refetch: refetchH } = useHospitals();
+  const { data: shelters, isLoading: loadS, error: errS, refetch: refetchS } = useShelters();
   const [tab, setTab] = useState<"hospitals" | "shelters">("hospitals");
   const [search, setSearch] = useState("");
   const isLoading = loadH || loadS;
+  const hasError = !!(errH || errS);
 
   const filteredHospitals = (hospitals ?? [])
     .map((h) => ({ ...h, dist: Math.round(haversineKm(REF_LAT, REF_LNG, h.lat, h.lng) * 10) / 10 }))
@@ -194,6 +195,17 @@ function FacilitiesPage() {
       <PageHeader title="Hospitals & Shelters" description="Medical facilities and evacuation shelters — sorted by distance from Kathmandu" />
 
       <div className="p-4 sm:p-6 space-y-5">
+
+        {/* Error banner */}
+        {hasError && !isLoading && (
+          <div className="flex items-center gap-3 rounded-lg border border-critical/30 bg-critical-soft px-4 py-3 text-sm text-critical" role="alert">
+            <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="flex-1">Failed to load facility data. Check your connection.</span>
+            <Button size="sm" variant="outline" className="shrink-0 h-7 text-xs" onClick={() => { refetchH(); refetchS(); }}>
+              <RefreshCw className="h-3 w-3 mr-1" />Retry
+            </Button>
+          </div>
+        )}
 
         {/* Demo note */}
         <div className="flex items-start gap-2 rounded-lg border border-moderate/40 bg-moderate-soft px-4 py-3 text-sm text-moderate-foreground">

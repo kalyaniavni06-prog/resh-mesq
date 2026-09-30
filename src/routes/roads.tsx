@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { MapPin, Search, Clock, Ruler, AlertTriangle } from "lucide-react";
+import { MapPin, Search, Clock, Ruler, AlertTriangle, WifiOff, RefreshCw } from "lucide-react";
 import { PageHeader, StatCard } from "@/components/PageHeader";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { RoadStateBadge } from "@/components/StatusBadge";
@@ -37,7 +37,7 @@ const STATE_OPTIONS: RoadState[] = [
 const RISK_OPTIONS: Severity[] = ["critical", "high", "moderate", "safe"];
 
 function RoadConditionsPage() {
-  const { data: roads, isLoading } = useRoads();
+  const { data: roads, isLoading, error, refetch } = useRoads();
   const [search, setSearch] = useState("");
   const [filterState, setFilterState] = useState<RoadState | "all">("all");
   const [filterRisk, setFilterRisk] = useState<Severity | "all">("all");
@@ -68,6 +68,22 @@ function RoadConditionsPage() {
       />
 
       <div className="p-6 space-y-6">
+
+        {/* Error banner */}
+        {error && !isLoading && (
+          <div className="flex items-center gap-3 rounded-lg border border-critical/30 bg-critical-soft px-4 py-3 text-sm text-critical" role="alert">
+            <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="flex-1">Failed to load road condition data. {error instanceof Error ? error.message : "Check your connection."}</span>
+            <button
+              type="button"
+              className="shrink-0 flex items-center gap-1 rounded-md border border-critical/30 px-2 py-1 text-xs hover:bg-critical/10"
+              onClick={() => refetch()}
+            >
+              <RefreshCw className="h-3 w-3" />Retry
+            </button>
+          </div>
+        )}
+
         {/* KPI */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {isLoading ? (

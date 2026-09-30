@@ -9,6 +9,7 @@ import {
   Navigation,
   Search,
   RefreshCw,
+  WifiOff,
 } from "lucide-react";
 import { PageHeader, StatCard } from "@/components/PageHeader";
 import { VehicleStatusBadge } from "@/components/StatusBadge";
@@ -173,7 +174,7 @@ function VehicleDetail({ vehicle, assignedIncidentRef }: { vehicle: Vehicle; ass
 }
 
 function VehicleTrackingPage() {
-  const { data: vehicles, isLoading, refetch } = useVehicles();
+  const { data: vehicles, isLoading, error, refetch } = useVehicles();
   const { data: incidents } = useIncidents();
 
   const [search, setSearch] = useState("");
@@ -216,6 +217,17 @@ function VehicleTrackingPage() {
       </PageHeader>
 
       <div className="p-6 space-y-6">
+        {/* Error banner */}
+        {error && !isLoading && (
+          <div className="flex items-center gap-3 rounded-lg border border-critical/30 bg-critical-soft px-4 py-3 text-sm text-critical" role="alert">
+            <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="flex-1">Failed to load vehicle data. {error instanceof Error ? error.message : "Check your connection."}</span>
+            <Button size="sm" variant="outline" className="shrink-0 h-7 text-xs" onClick={() => refetch()}>
+              <RefreshCw className="h-3 w-3 mr-1" />Retry
+            </Button>
+          </div>
+        )}
+
         {/* KPI */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {isLoading ? (

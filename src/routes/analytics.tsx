@@ -1,15 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { Activity, BarChart3, CheckCircle2, TrendingUp, Truck, AlertTriangle, MapPin } from "lucide-react";
+import { Activity, BarChart3, CheckCircle2, TrendingUp, Truck, AlertTriangle, MapPin, RefreshCw, WifiOff } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, LineChart, Line, CartesianGrid,
+  PieChart, Pie, Cell, LineChart, Line, CartesianGrid,
 } from "recharts";
 import { PageHeader, StatCard } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIncidents, useVehicles, useRoads, useAlerts } from "@/hooks/useSupabaseData";
+import { format, subDays, startOfDay } from "date-fns";
 
 export const Route = createFileRoute("/analytics")({ component: AnalyticsPage });
 
@@ -27,18 +29,23 @@ const VEH_COLORS: Record<string, string> = {
   offline: "oklch(0.51 0.03 258)",
 };
 
-// Simulated response-time trend (demo — no real timestamps span days)
-const DEMO_TREND = [
-  { day: "Mon", avg: 42 }, { day: "Tue", avg: 38 }, { day: "Wed", avg: 55 },
-  { day: "Thu", avg: 33 }, { day: "Fri", avg: 47 }, { day: "Sat", avg: 29 }, { day: "Sun", avg: 36 },
-];
+// ── Inline error/empty state component ────────────────────────────────────────
+function ChartEmpty({ message = "No data available" }: { message?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-32 text-center text-muted-foreground gap-2">
+      <BarChart3 className="h-6 w-6 opacity-30" aria-hidden="true" />
+      <p className="text-xs">{message}</p>
+    </div>
+  );
+}
 
 function AnalyticsPage() {
-  const { data: incidents, isLoading: liInc } = useIncidents();
-  const { data: vehicles, isLoading: liVeh } = useVehicles();
-  const { data: roads, isLoading: liRoads } = useRoads();
-  const { data: alerts, isLoading: liAlerts } = useAlerts();
+  const { data: incidents, isLoading: liInc, error: errInc, refetch: refetchInc } = useIncidents();
+  const { data: vehicles, isLoading: liVeh, error: errVeh } = useVehicles();
+  const { data: roads, isLoading: liRoads, error: errRoads } = useRoads();
+  const { data: alerts, isLoading: liAlerts, error: errAlerts } = useAlerts();
   const isLoading = liInc || liVeh || liRoads || liAlerts;
+  const hasError = !!(errInc || errVeh || errRoads || errAlerts);
 
   const incBySeverity = useMemo(() => {
     const c: Record<string, number> = {};
@@ -84,6 +91,8 @@ function AnalyticsPage() {
 
   // Road accessibility summary bar
   const roadAccess = useMemo(() => {
+    const total = (roads ?? []).length;
+    if (total === 0) return [];
     const open = (roads ?? []).filter((r) => r.state === "open").length;
     const caution = (roads ?? []).filter((r) => r.state === "high_risk").length;
     const blocked = (roads ?? []).filter((r) => !["open", "high_risk"].includes(r.state)).length;
@@ -94,18 +103,44 @@ function AnalyticsPage() {
     ].filter((x) => x.value > 0);
   }, [roads]);
 
+  // ── Real incident trend from created_at timestamps ────────────────────────
+  // Build last-7-days daily count from actual DB records
+  const incidentTrend = useMemo(() => {
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = startOfDay(subDays(new Date(), 6 - i));
+      return { date: d, label: format(d, "EEE"), count: 0 };
+    });
+    (incidents ?? []).forEach((inc) => {
+      const day = startOfDay(new Date(inc.created_at)).getTime();
+      const slot = days.find((d) => d.date.getTime() === day);
+      if (slot) slot.count += 1;
+    });
+    return days.map(({ label, count }) => ({ day: label, count }));
+  }, [incidents]);
+
+  const hasTrendData = incidentTrend.some((d) => d.count > 0);
+
   const activeInc = (incidents ?? []).filter((i) => i.status !== "resolved").length;
   const resolvedInc = (incidents ?? []).filter((i) => i.status === "resolved").length;
   const totalPeople = (incidents ?? []).reduce((s, i) => s + i.people_affected, 0);
-  const avgConf = (incidents ?? []).length > 0
-    ? Math.round((incidents ?? []).reduce((s, i) => s + i.ai_confidence, 0) / (incidents ?? []).length)
-    : 0;
+  const criticalInc = (incidents ?? []).filter((i) => i.severity === "critical").length;
 
   return (
     <div>
       <PageHeader title="Analytics" description="Operational metrics from the database" />
 
       <div className="p-4 sm:p-6 space-y-5">
+
+        {/* ── Global error banner ──────────────────────────────────────────── */}
+        {hasError && !isLoading && (
+          <div className="flex items-center gap-3 rounded-lg border border-critical/30 bg-critical-soft px-4 py-3 text-sm text-critical" role="alert">
+            <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="flex-1">Some data failed to load. Charts may be incomplete.</span>
+            <Button size="sm" variant="outline" className="shrink-0 h-7 text-xs" onClick={() => refetchInc()}>
+              <RefreshCw className="h-3 w-3 mr-1" />Retry
+            </Button>
+          </div>
+        )}
 
         {/* KPI row */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -114,7 +149,7 @@ function AnalyticsPage() {
               <StatCard label="Active Incidents" value={activeInc} icon={<Activity className="h-5 w-5" />} variant="high" />
               <StatCard label="Resolved" value={resolvedInc} icon={<CheckCircle2 className="h-5 w-5" />} variant="safe" />
               <StatCard label="Total Affected" value={totalPeople} sub="across all incidents" icon={<TrendingUp className="h-5 w-5" />} variant="moderate" />
-              <StatCard label="Report Confidence" value={`${avgConf}%`} sub="avg across incidents" icon={<BarChart3 className="h-5 w-5" />} />
+              <StatCard label="Critical" value={criticalInc} sub="immediate priority" icon={<AlertTriangle className="h-5 w-5" />} variant={criticalInc > 0 ? "critical" : "default"} />
             </>
           )}
         </div>
@@ -128,7 +163,9 @@ function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {isLoading ? <Skeleton className="h-8" /> : (
+            {isLoading ? <Skeleton className="h-8" /> : roadAccess.length === 0 ? (
+              <ChartEmpty message="No road data available" />
+            ) : (
               <>
                 <div className="flex h-6 w-full rounded-full overflow-hidden gap-px" role="img" aria-label="Road accessibility breakdown">
                   {roadAccess.map((r) => (
@@ -154,6 +191,33 @@ function AnalyticsPage() {
           </CardContent>
         </Card>
 
+        {/* ── Real incident trend (last 7 days from created_at) ─────────── */}
+        <Card>
+          <CardHeader className="pb-2 flex flex-row items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-sm">Incidents reported — last 7 days</CardTitle>
+            {!hasTrendData && <Badge variant="secondary" className="text-[10px]">No reports this week</Badge>}
+          </CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-36" /> : hasTrendData ? (
+              <ResponsiveContainer width="100%" height={140}>
+                <LineChart data={incidentTrend} margin={{ left: 0, right: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                  <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip formatter={(v) => [v, "Incidents"]} />
+                  <Line type="monotone" dataKey="count" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-32 text-center gap-2 text-muted-foreground">
+                <TrendingUp className="h-6 w-6 opacity-30" />
+                <p className="text-xs">No incidents reported in the last 7 days.</p>
+                <p className="text-[10px] text-muted-foreground/70">Data will appear here as reports are submitted.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Charts grid */}
         <div className="grid gap-4 lg:grid-cols-2">
 
@@ -163,21 +227,23 @@ function AnalyticsPage() {
               <CardTitle className="text-sm">Incidents by severity</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoading ? <Skeleton className="h-48" /> : (
+              {isLoading ? <Skeleton className="h-48" /> : incBySeverity.length === 0 ? <ChartEmpty message="No incidents logged yet" /> : (
                 <div className="flex items-center gap-4">
-                  <ResponsiveContainer width="50%" height={180}>
-                    <PieChart>
-                      <Pie data={incBySeverity} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value">
-                        {incBySeverity.map((e) => <Cell key={e.name} fill={SEV_COLORS[e.name] ?? "#888"} />)}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <ul className="flex-1 space-y-2 text-xs">
+                  <div className="w-1/2 min-w-0">
+                    <ResponsiveContainer width="100%" height={180}>
+                      <PieChart>
+                        <Pie data={incBySeverity} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value">
+                          {incBySeverity.map((e) => <Cell key={e.name} fill={SEV_COLORS[e.name] ?? "#888"} />)}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <ul className="flex-1 space-y-2 text-xs min-w-0">
                     {incBySeverity.map((d) => (
                       <li key={d.name} className="flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ background: SEV_COLORS[d.name] ?? "#888" }} aria-hidden="true" />
+                          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: SEV_COLORS[d.name] ?? "#888" }} aria-hidden="true" />
                           <span className="capitalize font-medium">{d.name}</span>
                         </span>
                         <span className="font-mono font-bold">{d.value}</span>
@@ -199,12 +265,12 @@ function AnalyticsPage() {
               <CardTitle className="text-sm">Incident status breakdown</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoading ? <Skeleton className="h-48" /> : (
+              {isLoading ? <Skeleton className="h-48" /> : incByStatus.length === 0 ? <ChartEmpty message="No incidents logged yet" /> : (
                 <>
                   <ResponsiveContainer width="100%" height={160}>
                     <BarChart data={incByStatus} layout="vertical" margin={{ left: 4, right: 16 }}>
                       <XAxis type="number" tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={76} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
                       <Tooltip />
                       <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                         {incByStatus.map((e) => <Cell key={e.rawName} fill={STATUS_COLORS[e.rawName] ?? "#888"} />)}
@@ -241,13 +307,13 @@ function AnalyticsPage() {
               <CardTitle className="text-sm">Incident types</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoading ? <Skeleton className="h-48" /> : (
+              {isLoading ? <Skeleton className="h-48" /> : incByType.length === 0 ? <ChartEmpty message="No incidents logged yet" /> : (
                 <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={incByType} margin={{ bottom: 36 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 9 }} angle={-30} textAnchor="end" interval={0} />
-                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <BarChart data={incByType} layout="vertical" margin={{ left: 4, right: 16 }}>
+                    <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
                     <Tooltip />
-                    <Bar dataKey="value" fill="oklch(0.53 0.17 255)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="value" fill="oklch(0.53 0.17 255)" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -260,7 +326,7 @@ function AnalyticsPage() {
               <CardTitle className="text-sm">People affected — top locations</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoading ? <Skeleton className="h-48" /> : (
+              {isLoading ? <Skeleton className="h-48" /> : peopleByLoc.length === 0 ? <ChartEmpty message="No incidents with affected persons logged" /> : (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={peopleByLoc} layout="vertical" margin={{ left: 4, right: 16 }}>
                     <XAxis type="number" tick={{ fontSize: 11 }} />
@@ -282,23 +348,25 @@ function AnalyticsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoading ? <Skeleton className="h-48" /> : (
+              {isLoading ? <Skeleton className="h-48" /> : vehByStatus.length === 0 ? <ChartEmpty message="No vehicle data available" /> : (
                 <div className="flex items-center gap-4">
-                  <ResponsiveContainer width="50%" height={160}>
-                    <PieChart>
-                      <Pie data={vehByStatus} cx="50%" cy="50%" outerRadius={70} paddingAngle={3} dataKey="value">
-                        {vehByStatus.map((e, i) => (
-                          <Cell key={e.rawName} fill={VEH_COLORS[e.rawName] ?? `hsl(${i * 60}, 60%, 50%)`} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="flex-1 space-y-2 text-xs">
+                  <div className="w-1/2 min-w-0">
+                    <ResponsiveContainer width="100%" height={160}>
+                      <PieChart>
+                        <Pie data={vehByStatus} cx="50%" cy="50%" outerRadius={70} paddingAngle={3} dataKey="value">
+                          {vehByStatus.map((e, i) => (
+                            <Cell key={e.rawName} fill={VEH_COLORS[e.rawName] ?? `hsl(${i * 60}, 60%, 50%)`} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex-1 space-y-2 text-xs min-w-0">
                     {vehByStatus.map((d, i) => (
                       <div key={d.rawName} className="flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ background: VEH_COLORS[d.rawName] ?? `hsl(${i * 60}, 60%, 50%)` }} aria-hidden="true" />
+                          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: VEH_COLORS[d.rawName] ?? `hsl(${i * 60}, 60%, 50%)` }} aria-hidden="true" />
                           <span className="capitalize">{d.name}</span>
                         </span>
                         <span className="font-mono font-bold">{d.value}</span>
@@ -315,9 +383,7 @@ function AnalyticsPage() {
                       <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                         <div
                           className="h-full rounded-full bg-primary"
-                          style={{
-                            width: `${(vehicles ?? []).length > 0 ? Math.round(((vehicles ?? []).filter((v) => v.status !== "available" && v.status !== "offline").length / (vehicles ?? []).length) * 100) : 0}%`,
-                          }}
+                          style={{ width: `${(vehicles ?? []).length > 0 ? Math.round(((vehicles ?? []).filter((v) => v.status !== "available" && v.status !== "offline").length / (vehicles ?? []).length) * 100) : 0}%` }}
                           role="progressbar"
                         />
                       </div>
@@ -325,28 +391,6 @@ function AnalyticsPage() {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Response time trend — sample data */}
-          <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm">Response-time trend</CardTitle>
-              <Badge variant="secondary" className="text-[10px]">Sample data</Badge>
-            </CardHeader>
-            <CardContent>
-              <p className="text-[10px] text-muted-foreground mb-3">
-                Illustrative 7-day pattern — not computed from real resolution timestamps. Actual metrics appear once incidents are resolved.
-              </p>
-              <ResponsiveContainer width="100%" height={150}>
-                <LineChart data={DEMO_TREND} margin={{ left: 0, right: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} unit="m" />
-                  <Tooltip formatter={(v) => [`${v} min`, "Avg response"]} />
-                  <Line type="monotone" dataKey="avg" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
             </CardContent>
           </Card>
 
@@ -359,7 +403,7 @@ function AnalyticsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoading ? <Skeleton className="h-36" /> : (
+              {isLoading ? <Skeleton className="h-36" /> : alertsBySev.length === 0 ? <ChartEmpty message="No alerts in the database" /> : (
                 <ResponsiveContainer width="100%" height={140}>
                   <BarChart data={alertsBySev} layout="vertical" margin={{ left: 4, right: 16 }}>
                     <XAxis type="number" tick={{ fontSize: 11 }} />
@@ -380,7 +424,7 @@ function AnalyticsPage() {
               <CardTitle className="text-sm">Road state distribution</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoading ? <Skeleton className="h-36" /> : (
+              {isLoading ? <Skeleton className="h-36" /> : roadsByState.length === 0 ? <ChartEmpty message="No road data available" /> : (
                 <ResponsiveContainer width="100%" height={140}>
                   <BarChart data={roadsByState} layout="vertical" margin={{ left: 4, right: 16 }}>
                     <XAxis type="number" tick={{ fontSize: 11 }} />
@@ -407,8 +451,8 @@ function AnalyticsPage() {
         </div>
 
         {/* Footer note */}
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>Data sourced from the operational Supabase database.</span>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between text-[11px] text-muted-foreground">
+          <span>All charts sourced from the live Supabase database. Incident trend is real data from the last 7 days.</span>
           <Link to="/command" className="text-primary hover:underline">← Back to Command Centre</Link>
         </div>
 
