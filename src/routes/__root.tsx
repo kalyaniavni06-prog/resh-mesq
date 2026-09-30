@@ -12,6 +12,7 @@ import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Toaster } from "@/components/ui/sonner";
 import { PreferencesProvider } from "@/lib/preferences";
 import { DemoModeProvider, DemoModeBanner } from "@/lib/demo-mode";
+import { DbSetupCheck } from "@/components/DbSetupCheck";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { registerServiceWorker } from "../hooks/useOfflineSOSQueue";
@@ -149,6 +150,7 @@ function RootComponent() {
           </div>
           <Toaster />
           <DemoModeBanner />
+          <DbSetupCheck />
         </DemoModeProvider>
       </PreferencesProvider>
     </QueryClientProvider>

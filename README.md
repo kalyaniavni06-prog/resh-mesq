@@ -115,7 +115,32 @@ PostgreSQL (9 tables, 5 enums)
 
 ---
 
-## How to Run Locally
+## ⚠️ CRITICAL — Apply the Database Schema First
+
+The application **will not work** until the database schema is applied to your Supabase project.
+The migrations live in the repo but Supabase does not auto-apply them.
+
+**One-step setup:**
+
+1. Go to your [Supabase Dashboard](https://supabase.com/dashboard)
+2. Select your project → **SQL Editor**
+3. Open and paste the entire contents of:
+   ```
+   drizzle/migrations/APPLY_ALL_IDEMPOTENT.sql
+   ```
+4. Click **Run**
+5. After the SQL runs, go to **Storage → New bucket**:
+   - Name: `emergency-photos`
+   - Public access: **ON**
+
+That's it. All tables, policies, enums, seed data, and triggers are created in that one file.
+It is **idempotent** — safe to run multiple times.
+
+**Why does this exist?** Supabase does not automatically run files in your Git repository. The SQL must be explicitly executed against your project's database.
+
+---
+
+
 
 ### Prerequisites
 
