@@ -13,26 +13,44 @@ const DISMISS_KEY = "reshmesq.dbSetupDismissed";
 
 type CheckResult = "ok" | "missing_tables" | "checking";
 
-const REQUIRED_TABLES = ["emergency_incidents", "missing_persons", "road_conditions"];
-
 async function checkTables(): Promise<{ status: CheckResult; missing: string[] }> {
   const missing: string[] = [];
-  for (const table of REQUIRED_TABLES) {
-    const { error } = await (supabase.from(table as "emergency_incidents") as ReturnType<typeof supabase.from>)
-      .select("id")
-      .limit(1)
-      .maybeSingle();
-    // PGRST116 = no rows (table exists, just empty) — that's fine
-    // 42P01 / "does not exist" / "schema cache" = table missing
-    if (
-      error &&
-      (error.code === "42P01" ||
-        error.message.includes("does not exist") ||
-        error.message.includes("schema cache"))
-    ) {
-      missing.push(table);
+
+  // Probe each critical table with a properly-typed query.
+  // PGRST116 = "no rows" — table exists but is empty, which is fine.
+  // 42P01 / message includes "does not exist" / "schema cache" = table missing.
+  const probes: Array<{ name: string; fn: () => Promise<{ error: { code?: string; message?: string } | null }> }> = [
+    {
+      name: "emergency_incidents",
+      fn: () => supabase.from("emergency_incidents").select("id").limit(1).maybeSingle(),
+    },
+    {
+      name: "missing_persons",
+      fn: () => supabase.from("missing_persons").select("id").limit(1).maybeSingle(),
+    },
+    {
+      name: "road_conditions",
+      fn: () => supabase.from("road_conditions").select("id").limit(1).maybeSingle(),
+    },
+  ];
+
+  for (const probe of probes) {
+    try {
+      const { error } = await probe.fn();
+      if (
+        error &&
+        error.code !== "PGRST116" && // "no rows" is fine
+        (error.code === "42P01" ||
+          (error.message?.includes("does not exist")) ||
+          (error.message?.includes("schema cache")))
+      ) {
+        missing.push(probe.name);
+      }
+    } catch {
+      // Network error etc. — don't show the setup banner for transient issues
     }
   }
+
   return { status: missing.length === 0 ? "ok" : "missing_tables", missing };
 }
 
