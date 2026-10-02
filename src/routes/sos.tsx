@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getSpeechRecognition, type SpeechRecognitionEvent } from "@/lib/speech";
 import {
