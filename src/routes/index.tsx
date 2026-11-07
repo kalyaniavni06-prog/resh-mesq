@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowDown,
   CheckCircle2,
+  Database,
   Navigation,
   Radio,
   Route as RouteIcon,
@@ -16,6 +17,10 @@ import {
   BarChart3,
   Hospital,
   Map,
+  FileText,
+  Search,
+  Activity,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -360,6 +365,110 @@ function Landing() {
                 </div>
               </Link>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How This Demo Works ─────────────────────────────────────── */}
+      <section className="border-b border-border px-4 py-10" aria-labelledby="how-demo-works-heading">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-8 text-center">
+            <p className="label-caps text-primary mb-2">Understanding this platform</p>
+            <h2 id="how-demo-works-heading" className="font-display text-2xl font-bold tracking-tight">
+              How This Demo Works
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground max-w-xl mx-auto">
+              RESH MESQ is a fully functional emergency response platform. Here's a clear explanation
+              of what you're seeing and how to interact with it.
+            </p>
+          </div>
+
+          {/* 3-step flow */}
+          <div className="grid gap-6 sm:grid-cols-3 mb-10">
+            {[
+              {
+                step: "1",
+                icon: FileText,
+                color: "bg-critical text-white",
+                title: "Report",
+                body: "Anyone can report an emergency or missing person via the SOS form. Reports are stored in the live Supabase database and appear immediately across all connected screens.",
+              },
+              {
+                step: "2",
+                icon: Search,
+                color: "bg-primary text-white",
+                title: "Analyse",
+                body: "RESH MESQ evaluates available incident, road-condition and resource data. The route planner scores every road corridor for hazard level and recommends the safest path.",
+              },
+              {
+                step: "3",
+                icon: Activity,
+                color: "bg-safe text-white",
+                title: "Respond",
+                body: "Responders monitor incidents on the Command Centre dashboard, coordinate available vehicles, plan safer routes, update incident status and track missing persons.",
+              },
+            ].map((item) => (
+              <div key={item.step} className="flex flex-col items-center text-center panel p-6">
+                <div className={`flex h-12 w-12 items-center justify-center rounded-full ${item.color} shadow-sm mb-4`} aria-hidden="true">
+                  <item.icon className="h-6 w-6" />
+                </div>
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-xs font-bold text-muted-foreground mb-2" aria-hidden="true">
+                  {item.step}
+                </div>
+                <h3 className="font-semibold text-foreground mb-1">{item.title}</h3>
+                <p className="text-sm text-muted-foreground">{item.body}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Live vs Demo distinction */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Live / user-generated */}
+            <div className="rounded-xl border border-safe/30 bg-safe-soft p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="flex h-2.5 w-2.5 rounded-full bg-safe" aria-hidden="true" />
+                <p className="text-sm font-semibold text-safe-foreground">Live / User-Generated Data</p>
+              </div>
+              <ul className="space-y-2 text-sm text-safe-foreground">
+                {[
+                  "SOS reports submitted through the application",
+                  "Missing person reports you file",
+                  "Community map pins you drop",
+                  "Current database state and records",
+                  "Your location — only when you explicitly grant browser permission",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-safe" aria-hidden="true" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Seeded / demo */}
+            <div className="rounded-xl border border-moderate/30 bg-moderate-soft p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Database className="h-3.5 w-3.5 text-moderate-foreground" aria-hidden="true" />
+                <p className="text-sm font-semibold text-moderate-foreground">Seeded / Scenario Data</p>
+              </div>
+              <ul className="space-y-2 text-sm text-moderate-foreground">
+                {[
+                  "Pre-loaded Nepal & Bihar flood scenario incidents",
+                  "Sample hospitals, shelters and road conditions",
+                  "Demo emergency vehicles and their positions",
+                  "Camera feeds (scenario / not live streams)",
+                  "Sample disaster alerts for presentation purposes",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <Lock className="h-3.5 w-3.5 mt-0.5 shrink-0 text-moderate-foreground" aria-hidden="true" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-moderate-foreground/80 italic">
+                Seeded data is pre-loaded to demonstrate the platform when real reports are unavailable. It is clearly labelled and not claimed to be live.
+              </p>
+            </div>
           </div>
         </div>
       </section>
